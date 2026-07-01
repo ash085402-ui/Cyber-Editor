@@ -17,7 +17,7 @@ const GoogleIcon: React.FC = () => (
 const GALLERY_IMAGES = [
   { id: 'img1', src: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=300&auto=format&fit=crop&q=60', name: 'Abstract Blue/Purple' },
   { id: 'img2', src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=60', name: 'Minimal Shapes' },
-  { id: 'img3', src: 'https://images.unsplash.com/photo-1618005198143-d3663dc3e506?w=300&auto=format&fit=crop&q=60', name: 'Fluid Gradient' },
+  { id: 'img3', src: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEDXoVX3Q4YN8FX8pNhObaDGhqlUJI7kL0FSz_ECQqhA&s=10', name: 'Fluid Gradient' },
   { id: 'img4', src: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=300&auto=format&fit=crop&q=60', name: 'Liquid Gold' },
   { id: 'img5', src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300&auto=format&fit=crop&q=60', name: 'Mountain Sunset' },
   { id: 'img6', src: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=300&auto=format&fit=crop&q=60', name: 'Pink Minimalist' },
