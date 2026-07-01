@@ -351,12 +351,9 @@ export const Sidebar: React.FC = () => {
             <span>Շաբլոններ (Templates)</span>
           </button>
 
-          <button
+          <button 
             className="hud-button"
-            onClick={() => {
-              // Այստեղ կարող ես ավելացնել քո գործողությունը
-              console.log("Նոր կոճակը սեղմվեց");
-            }}
+            onClick={() => alert("Նոր կոճակ")}
             style={{
               width: '100%',
               display: 'flex',
@@ -371,7 +368,7 @@ export const Sidebar: React.FC = () => {
               cursor: 'pointer'
             }}
           >
-            <ImageIcon size={14} style={{ color: 'var(--purple)' }} />
+            <Settings size={14} style={{ color: 'var(--purple)' }} />
             <span>Իմ Նոր Կոճակը</span>
           </button>
         </div>
