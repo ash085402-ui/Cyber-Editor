@@ -351,9 +351,9 @@ export const Sidebar: React.FC = () => {
             <span>Շաբլոններ (Templates)</span>
           </button>
 
-          <button 
+          <button
             className="hud-button"
-            onClick={() => alert("Նոր կոճակ")}
+            onClick={() => alert("Նոր կոճակը աշխատում է!")}
             style={{
               width: '100%',
               display: 'flex',
