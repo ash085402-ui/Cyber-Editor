@@ -10,19 +10,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.13.5",
-    "konva": "^10.3.0",
-    "lucide-react": "^1.23.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-konva": "^19.2.5",
-    "zustand": "^5.0.14"
+  "@react-oauth/google": "^0.13.5",
+  "konva": "^10.3.0",
+  "lucide-react": "^1.23.0",
+  "react": "^19.2.7",
+  "react-dom": "^19.2.7",
+  "react-konva": "^19.2.5",
+  "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "esbuild": "^0.28.1",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"

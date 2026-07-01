@@ -3,14 +3,16 @@ import { Square, Circle as CircleIcon, Star, Type, Image as ImageIcon, Undo2, Re
 import { useCanvasStore } from '../store/canvasStore';
 
 export const RadialMenu: React.FC = () => {
-  const { addShape, undo, redo, clearCanvas, past, future } = useCanvasStore();
+  const { addShape, undo, redo, clearCanvas, past, future, pages, activePageId } = useCanvasStore();
+  const activePage = pages.find(p => p.id === activePageId) || pages[0]!;
+  const centerX = 150 + activePage.width / 2;
+  const centerY = 100 + activePage.height / 2;
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Touch long press support
-  const touchTimerRef = useRef<any>(null);
+  const touchTimerRef = useRef<number | null>(null);
 
   const openMenu = (x: number, y: number) => {
     setCoords({ x, y });
@@ -27,25 +29,27 @@ export const RadialMenu: React.FC = () => {
       openMenu(e.clientX, e.clientY);
     };
 
-    // Close menu when clicking outside
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         closeMenu();
       }
     };
 
-    // Long press detection for mobile devices
     const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      touchTimerRef.current = setTimeout(() => {
-        e.preventDefault();
-        openMenu(touch.clientX, touch.clientY);
-      }, 700); // 700ms for long press
+      const touch = e.touches?.[0] || e.changedTouches?.[0];
+      
+      if (touch) {
+        touchTimerRef.current = window.setTimeout(() => {
+          e.preventDefault();
+          openMenu(touch.clientX, touch.clientY);
+        }, 700);
+      }
     };
 
     const handleTouchEnd = () => {
       if (touchTimerRef.current) {
         clearTimeout(touchTimerRef.current);
+        touchTimerRef.current = null;
       }
     };
 
@@ -65,8 +69,8 @@ export const RadialMenu: React.FC = () => {
   const handleAddRect = () => {
     addShape({
       type: 'rect',
-      x: window.innerWidth / 2 - 250 + (Math.random() * 60 - 30),
-      y: window.innerHeight / 2 - 200 + (Math.random() * 60 - 30),
+      x: centerX - 60 + (Math.random() * 60 - 30),
+      y: centerY - 60 + (Math.random() * 60 - 30),
       width: 120,
       height: 120,
       fill: '#00f2fe',
@@ -83,8 +87,8 @@ export const RadialMenu: React.FC = () => {
   const handleAddCircle = () => {
     addShape({
       type: 'circle',
-      x: window.innerWidth / 2 - 250 + (Math.random() * 60 - 30),
-      y: window.innerHeight / 2 - 200 + (Math.random() * 60 - 30),
+      x: centerX - 60 + (Math.random() * 60 - 30),
+      y: centerY - 60 + (Math.random() * 60 - 30),
       width: 120,
       height: 120,
       fill: '#ff007f',
@@ -101,8 +105,8 @@ export const RadialMenu: React.FC = () => {
   const handleAddStar = () => {
     addShape({
       type: 'star',
-      x: window.innerWidth / 2 - 250 + (Math.random() * 60 - 30),
-      y: window.innerHeight / 2 - 200 + (Math.random() * 60 - 30),
+      x: centerX - 60 + (Math.random() * 60 - 30),
+      y: centerY - 60 + (Math.random() * 60 - 30),
       width: 120,
       height: 120,
       fill: '#7928ca',
@@ -119,8 +123,8 @@ export const RadialMenu: React.FC = () => {
   const handleAddText = () => {
     addShape({
       type: 'text',
-      x: window.innerWidth / 2 - 250,
-      y: window.innerHeight / 2 - 200,
+      x: centerX - 125,
+      y: centerY - 20,
       width: 250,
       height: 40,
       fill: '#ffffff',
@@ -150,8 +154,8 @@ export const RadialMenu: React.FC = () => {
         if (event.target?.result) {
           addShape({
             type: 'image',
-            x: window.innerWidth / 2 - 350,
-            y: window.innerHeight / 2 - 300,
+            x: centerX - 125,
+            y: centerY - 125,
             width: 250,
             height: 250,
             fill: '',
@@ -169,7 +173,6 @@ export const RadialMenu: React.FC = () => {
     }
   };
 
-  // 8 items in total. Radius is 75px
   const items = [
     { icon: <Square size={18} />, label: 'Rect', action: handleAddRect },
     { icon: <CircleIcon size={18} />, label: 'Circle', action: handleAddCircle },
@@ -206,7 +209,7 @@ export const RadialMenu: React.FC = () => {
           </div>
           
           {items.map((item, index) => {
-            const angle = (index * 2 * Math.PI) / items.length - Math.PI / 2; // Offset by -90deg so first item starts at the top
+            const angle = (index * 2 * Math.PI) / items.length - Math.PI / 2;
             const x = Math.cos(angle) * radius;
             const y = Math.sin(angle) * radius;
 

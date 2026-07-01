@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer } from 'react-konva';
-import { Undo2, Redo2, Trash2, Download } from 'lucide-react';
+import { Undo2, Redo2, Trash2, Download, FileText } from 'lucide-react';
 import { useCanvasStore, type Shape } from '../store/canvasStore';
 
 // Custom Image Component to handle image loading
@@ -9,20 +9,27 @@ interface CanvasImageProps {
   isSelected: boolean;
   onSelect: () => void;
   onChange: (newProps: Partial<Shape>) => void;
+  draggable: boolean;
 }
 
-const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSelected, onSelect, onChange }) => {
+const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSelected, onSelect, onChange, draggable }) => {
   const shapeRef = useRef<any>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
+    let active = true;
     if (shapeProps.src) {
       const img = new window.Image();
       img.src = shapeProps.src;
       img.onload = () => {
-        setImage(img);
+        if (active) {
+          setImage(img);
+        }
       };
     }
+    return () => {
+      active = false;
+    };
   }, [shapeProps.src]);
 
   return image ? (
@@ -41,7 +48,7 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
       shadowOpacity={shapeProps.glowBlur ? 0.8 : 0}
       onClick={onSelect}
       onTap={onSelect}
-      draggable
+      draggable={draggable}
       onDragEnd={(e) => {
         onChange({
           x: e.target.x(),
@@ -79,33 +86,44 @@ export const InteractiveCanvas: React.FC = () => {
     deleteShape,
     past,
     future,
-    clearCanvas 
+    clearCanvas,
+    a4Mode,
+    setA4Mode,
+    pages,
+    activePageId,
+    sidebarOpen
   } = useCanvasStore();
   const stageRef = useRef<any>(null);
   const transformerRef = useRef<any>(null);
   
+  const activePage = pages.find(p => p.id === activePageId) || pages[0]!;
+
   // Pan and zoom states
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isMiddleMouseDown, setIsMiddleMouseDown] = useState(false);
 
-  // Dynamic Canvas dimensions to account for left sidebar
+  // Dynamic Canvas dimensions to account for left sidebar (if open) and right panel (260px)
   const [canvasSize, setCanvasSize] = useState({
-    width: window.innerWidth > 768 ? window.innerWidth - 280 : window.innerWidth,
+    width: window.innerWidth > 768 
+      ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260 
+      : window.innerWidth,
     height: window.innerHeight
   });
 
   useEffect(() => {
     const handleResize = () => {
       setCanvasSize({
-        width: window.innerWidth > 768 ? window.innerWidth - 280 : window.innerWidth,
+        width: window.innerWidth > 768 
+          ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260 
+          : window.innerWidth,
         height: window.innerHeight
       });
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [sidebarOpen]);
 
   // Listen for reset canvas events from home navigation button click
   useEffect(() => {
@@ -269,7 +287,7 @@ export const InteractiveCanvas: React.FC = () => {
   };
 
   // Handle stage drag for panning (only if space pressed, middle mouse button pressed, or clicked empty canvas)
-  const handleStageDragEnd = (e: any) => {
+  const handleStageDrag = (e: any) => {
     if (e.target === stageRef.current) {
       setPosition(stageRef.current.position());
     }
@@ -358,11 +376,11 @@ export const InteractiveCanvas: React.FC = () => {
       color: textNode.fill(),
       transform: `rotate(${textNode.rotation()}deg)`,
       transformOrigin: 'top left',
-      background: '#0a0a10',
-      border: '1px dashed var(--cyan)',
-      boxShadow: '0 0 10px var(--cyan)',
+      background: 'var(--bg-card)',
+      backdropFilter: 'blur(8px)',
+      border: '1px dashed var(--purple)',
+      boxShadow: '0 0 10px rgba(79, 70, 229, 0.3)',
       outline: 'none',
-      colorScheme: 'dark',
       padding: '4px',
       overflow: 'hidden',
       zIndex: 1000,
@@ -376,35 +394,67 @@ export const InteractiveCanvas: React.FC = () => {
     }
   };
 
-  // High resolution canvas export as PNG
+  // High resolution canvas export as PNG (without selection bounds or render delays)
   const handleExport = () => {
     const stage = stageRef.current;
     if (!stage) return;
-    
-    // Deselect shape so selection bounds don't appear in export
-    setSelectedId(null);
-    
-    // Short timeout to let react-konva render the layer without the transformer
-    setTimeout(() => {
-      // Calculate active boundary box of all shapes
-      if (shapes.length === 0) {
-        alert("Կտավը դատարկ է։");
-        return;
-      }
 
-      // Export using pixelRatio: 2 for high density rendering
-      const dataURL = stage.toDataURL({ 
-        pixelRatio: 2,
-        mimeType: 'image/png'
-      });
-      
-      const link = document.createElement('a');
-      link.download = `cyber-design-${Date.now()}.png`;
-      link.href = dataURL;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }, 50);
+    if (shapes.length === 0) {
+      alert("Կտավը դատարկ է։");
+      return;
+    }
+
+    // Hide transformer temporarily so selection bounds don't appear in the image
+    const transformer = transformerRef.current;
+    let originalNodes = [];
+    if (transformer) {
+      originalNodes = transformer.nodes();
+      transformer.nodes([]);
+      transformer.getLayer().batchDraw();
+    }
+
+    // Store current position and scale
+    const oldScale = stage.scaleX();
+    const oldPos = stage.position();
+
+    // Reset zoom and pan for clean export relative to top-left (0,0)
+    stage.scale({ x: 1, y: 1 });
+    stage.position({ x: 0, y: 0 });
+    stage.batchDraw();
+
+    // Export parameters - crop to active page dimensions if A4 mode is active
+    const exportParams = a4Mode ? {
+      x: 150,
+      y: 100,
+      width: activePage.width,
+      height: activePage.height,
+      pixelRatio: 2,
+      mimeType: 'image/png'
+    } : {
+      pixelRatio: 2,
+      mimeType: 'image/png'
+    };
+
+    // Export using pixelRatio: 2 for high density rendering
+    const dataURL = stage.toDataURL(exportParams);
+
+    // Restore zoom and pan
+    stage.scale({ x: oldScale, y: oldScale });
+    stage.position(oldPos);
+    stage.batchDraw();
+
+    // Restore transformer selection nodes
+    if (transformer && originalNodes.length > 0) {
+      transformer.nodes(originalNodes);
+      transformer.getLayer().batchDraw();
+    }
+    
+    const link = document.createElement('a');
+    link.download = `cyber-design-${Date.now()}.png`;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Dynamic CSS variables for grid background sync
@@ -415,7 +465,7 @@ export const InteractiveCanvas: React.FC = () => {
 
   return (
     <div 
-      className="canvas-container" 
+      className={`canvas-container ${sidebarOpen ? '' : 'sidebar-closed'}`} 
       style={gridStyle}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -467,6 +517,16 @@ export const InteractiveCanvas: React.FC = () => {
           <Download size={14} style={{ marginRight: '6px' }} />
           <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>EXPORT PNG</span>
         </button>
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
+        <button 
+          className="hud-button" 
+          onClick={() => setA4Mode(!a4Mode)} 
+          title="A4 Էջի Ռեժիմ"
+          style={a4Mode ? { borderColor: 'var(--purple)', color: 'var(--purple)', background: 'rgba(79, 70, 229, 0.08)' } : {}}
+        >
+          <FileText size={14} style={{ marginRight: '6px' }} />
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>A4 MODE: {a4Mode ? 'ON' : 'OFF'}</span>
+        </button>
       </div>
 
       {/* File Drag and Drop Overlay Indicator */}
@@ -510,9 +570,25 @@ export const InteractiveCanvas: React.FC = () => {
         onTouchStart={checkDeselect}
         onWheel={handleWheel}
         draggable={isSpacePressed || isMiddleMouseDown}
-        onDragEnd={handleStageDragEnd}
+        onDragMove={handleStageDrag}
+        onDragEnd={handleStageDrag}
       >
         <Layer>
+          {a4Mode && (
+            <Rect
+              x={150}
+              y={100}
+              width={activePage.width}
+              height={activePage.height}
+              fill="#ffffff"
+              stroke="#e2e8f0"
+              strokeWidth={1}
+              shadowColor="rgba(0,0,0,0.15)"
+              shadowBlur={20}
+              shadowOpacity={0.4}
+              listening={false}
+            />
+          )}
           {shapes.map((shape) => {
             const isSelected = shape.id === selectedId;
             const commonProps = {
@@ -658,6 +734,7 @@ export const InteractiveCanvas: React.FC = () => {
                   isSelected={isSelected}
                   onSelect={() => setSelectedId(shape.id)}
                   onChange={(newProps) => updateShape(shape.id, newProps)}
+                  draggable={!editingTextId}
                 />
               );
             }

@@ -22,182 +22,445 @@ export interface Shape {
   glowBlur?: number;
 }
 
+export interface Page {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  shapes: Shape[];
+  past: Shape[][];
+  future: Shape[][];
+}
+
 interface CanvasState {
+  pages: Page[];
+  activePageId: string;
   shapes: Shape[];
   selectedId: string | null;
   past: Shape[][];
   future: Shape[][];
-  
-  // Selection
+  a4Mode: boolean;
+
+  // Page actions
+  addPage: (width?: number, height?: number) => void;
+  deletePage: (id: string) => void;
+  setActivePageId: (id: string) => void;
+  reorderPages: (startIndex: number, endIndex: number) => void;
+  updatePageDimensions: (id: string, width: number, height: number) => void;
+  updatePageName: (id: string, name: string) => void;
+  duplicatePage: (id: string) => void;
+  setA4Mode: (enabled: boolean) => void;
+  loadProject: (pages: Page[], activePageId: string) => void;
+
+  // Shapes actions (operate on active page)
   setSelectedId: (id: string | null) => void;
-  
-  // History
   saveToHistory: () => void;
-  
-  // Shape Operations
   addShape: (shape: Omit<Shape, 'id'>) => void;
   updateShape: (id: string, newProps: Partial<Shape>, skipHistory?: boolean) => void;
   deleteShape: (id: string) => void;
   clearCanvas: () => void;
-  
-  // Reordering (Layers)
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
-  
-  // Undo/Redo
   undo: () => void;
   redo: () => void;
+  loadTemplate: (shapes: Omit<Shape, 'id'>[]) => void;
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
 }
 
-// Deep clone helper
 const cloneShapes = (shapes: Shape[]): Shape[] => {
   return JSON.parse(JSON.stringify(shapes));
 };
 
-export const useCanvasStore = create<CanvasState>((set, get) => ({
-  shapes: [],
-  selectedId: null,
-  past: [],
-  future: [],
+const saveStateToLocalStorage = (pages: Page[], activePageId: string) => {
+  try {
+    localStorage.setItem('cyber_editor_pages', JSON.stringify(pages));
+    localStorage.setItem('cyber_editor_active_page_id', activePageId);
+  } catch (e) {
+    console.error('Error saving state to localStorage:', e);
+  }
+};
 
-  setSelectedId: (id) => set({ selectedId: id }),
-
-  saveToHistory: () => {
-    const { shapes, past } = get();
-    set({
-      past: [...past, cloneShapes(shapes)],
-      future: [], // Clear redo history on new action
-    });
-  },
-
-  addShape: (shapeProps) => {
-    const { saveToHistory, shapes } = get();
-    saveToHistory();
+const getInitialState = () => {
+  try {
+    const savedPages = localStorage.getItem('cyber_editor_pages');
+    const savedActivePageId = localStorage.getItem('cyber_editor_active_page_id');
     
-    const newShape: Shape = {
-      ...shapeProps,
-      id: `${shapeProps.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    };
-
-    set({
-      shapes: [...shapes, newShape],
-      selectedId: newShape.id,
-    });
-  },
-
-  updateShape: (id, newProps, skipHistory = false) => {
-    const { saveToHistory, shapes } = get();
-    if (!skipHistory) {
-      saveToHistory();
+    if (savedPages && savedActivePageId) {
+      const pages: Page[] = JSON.parse(savedPages);
+      if (pages.length > 0) {
+        const activePage = pages.find(p => p.id === savedActivePageId) || pages[0]!;
+        return {
+          pages,
+          activePageId: activePage.id,
+          shapes: activePage.shapes || [],
+          past: activePage.past || [],
+          future: activePage.future || [],
+          a4Mode: true
+        };
+      }
     }
-    
-    set({
-      shapes: shapes.map((s) => (s.id === id ? { ...s, ...newProps } : s)),
-    });
-  },
+  } catch (e) {
+    console.error('Error loading state from localStorage:', e);
+  }
+  
+  // Default to single A4 page
+  const defaultPageId = `page_${Date.now()}`;
+  const defaultPage: Page = {
+    id: defaultPageId,
+    name: 'Էջ 1',
+    width: 794,
+    height: 1123,
+    shapes: [],
+    past: [],
+    future: [],
+  };
+  return {
+    pages: [defaultPage],
+    activePageId: defaultPageId,
+    shapes: [],
+    past: [],
+    future: [],
+    a4Mode: true
+  };
+};
 
-  deleteShape: (id) => {
-    const { saveToHistory, shapes, selectedId } = get();
-    saveToHistory();
-    
-    set({
-      shapes: shapes.filter((s) => s.id !== id),
-      selectedId: selectedId === id ? null : selectedId,
-    });
-  },
+const initialState = getInitialState();
 
-  clearCanvas: () => {
-    const { saveToHistory } = get();
-    saveToHistory();
-    
-    set({
-      shapes: [],
-      selectedId: null,
-    });
-  },
+export const useCanvasStore = create<CanvasState>((set, get) => {
+  // Helper to sync local shapes changes into the pages list and localStorage
+  const syncPagesAndSave = (shapesUpdate: Partial<CanvasState>) => {
+    set(shapesUpdate);
+    const state = get();
+    const updatedPages = state.pages.map((p) => 
+      p.id === state.activePageId 
+        ? { ...p, shapes: state.shapes, past: state.past, future: state.future } 
+        : p
+    );
+    set({ pages: updatedPages });
+    saveStateToLocalStorage(updatedPages, state.activePageId);
+  };
 
-  // Layers Management
-  bringToFront: (id) => {
-    const { saveToHistory, shapes } = get();
-    const index = shapes.findIndex((s) => s.id === id);
-    if (index === -1 || index === shapes.length - 1) return;
-    
-    saveToHistory();
-    const newShapes = cloneShapes(shapes);
-    const [element] = newShapes.splice(index, 1);
-    newShapes.push(element);
-    
-    set({ shapes: newShapes });
-  },
+  return {
+    pages: initialState.pages,
+    activePageId: initialState.activePageId,
+    shapes: initialState.shapes,
+    selectedId: null,
+    past: initialState.past,
+    future: initialState.future,
+    a4Mode: initialState.a4Mode,
+    sidebarOpen: true,
 
-  sendToBack: (id) => {
-    const { saveToHistory, shapes } = get();
-    const index = shapes.findIndex((s) => s.id === id);
-    if (index === -1 || index === 0) return;
-    
-    saveToHistory();
-    const newShapes = cloneShapes(shapes);
-    const [element] = newShapes.splice(index, 1);
-    newShapes.unshift(element);
-    
-    set({ shapes: newShapes });
-  },
+    setA4Mode: (enabled) => set({ a4Mode: enabled }),
+    toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
-  moveUp: (id) => {
-    const { saveToHistory, shapes } = get();
-    const index = shapes.findIndex((s) => s.id === id);
-    if (index === -1 || index === shapes.length - 1) return;
-    
-    saveToHistory();
-    const newShapes = cloneShapes(shapes);
-    const temp = newShapes[index];
-    newShapes[index] = newShapes[index + 1];
-    newShapes[index + 1] = temp;
-    
-    set({ shapes: newShapes });
-  },
+    // Pages management
+    addPage: (width = 794, height = 1123) => {
+      const { pages } = get();
+      const newPageId = `page_${Date.now()}`;
+      const newPage: Page = {
+        id: newPageId,
+        name: `Էջ ${pages.length + 1}`,
+        width,
+        height,
+        shapes: [],
+        past: [],
+        future: [],
+      };
+      const updatedPages = [...pages, newPage];
+      set({
+        pages: updatedPages,
+        activePageId: newPageId,
+        shapes: [],
+        past: [],
+        future: [],
+        selectedId: null,
+      });
+      saveStateToLocalStorage(updatedPages, newPageId);
+    },
 
-  moveDown: (id) => {
-    const { saveToHistory, shapes } = get();
-    const index = shapes.findIndex((s) => s.id === id);
-    if (index === -1 || index === 0) return;
-    
-    saveToHistory();
-    const newShapes = cloneShapes(shapes);
-    const temp = newShapes[index];
-    newShapes[index] = newShapes[index - 1];
-    newShapes[index - 1] = temp;
-    
-    set({ shapes: newShapes });
-  },
+    deletePage: (id) => {
+      const { pages, activePageId } = get();
+      if (pages.length <= 1) return; // Keep at least one page
+      
+      const updatedPages = pages.filter(p => p.id !== id);
+      let newActiveId = activePageId;
+      if (activePageId === id) {
+        const index = pages.findIndex(p => p.id === id);
+        const neighbor = pages[index - 1] || pages[index + 1];
+        newActiveId = neighbor!.id;
+      }
+      
+      const activePage = updatedPages.find(p => p.id === newActiveId)!;
+      set({
+        pages: updatedPages,
+        activePageId: newActiveId,
+        shapes: activePage.shapes || [],
+        past: activePage.past || [],
+        future: activePage.future || [],
+        selectedId: null,
+      });
+      saveStateToLocalStorage(updatedPages, newActiveId);
+    },
 
-  undo: () => {
-    if (get().past.length === 0) return;
-    
-    const previous = get().past[get().past.length - 1];
-    const newPast = get().past.slice(0, get().past.length - 1);
-    const current = get().shapes;
-    
-    set({
-      past: newPast,
-      shapes: previous,
-      future: [cloneShapes(current), ...get().future],
-    });
-  },
+    setActivePageId: (id) => {
+      const { pages, activePageId } = get();
+      if (activePageId === id) return;
 
-  redo: () => {
-    if (get().future.length === 0) return;
-    
-    const next = get().future[0];
-    const newFuture = get().future.slice(1);
-    const current = get().shapes;
-    
-    set({
-      past: [...get().past, cloneShapes(current)],
-      shapes: next,
-      future: newFuture,
-    });
-  },
-}));
+      // Sync active page state before moving
+      const syncedPages = pages.map((p) => 
+        p.id === activePageId 
+          ? { ...p, shapes: get().shapes, past: get().past, future: get().future } 
+          : p
+      );
+
+      const targetPage = syncedPages.find(p => p.id === id)!;
+      set({
+        pages: syncedPages,
+        activePageId: id,
+        shapes: targetPage.shapes || [],
+        past: targetPage.past || [],
+        future: targetPage.future || [],
+        selectedId: null,
+      });
+      saveStateToLocalStorage(syncedPages, id);
+    },
+
+    reorderPages: (startIndex, endIndex) => {
+      const { pages, activePageId } = get();
+      const updatedPages = [...pages];
+      const [removed] = updatedPages.splice(startIndex, 1);
+      if (removed) {
+        updatedPages.splice(endIndex, 0, removed);
+      }
+      set({ pages: updatedPages });
+      saveStateToLocalStorage(updatedPages, activePageId);
+    },
+
+    updatePageDimensions: (id, width, height) => {
+      const { pages, activePageId } = get();
+      const updatedPages = pages.map(p => 
+        p.id === id ? { ...p, width, height } : p
+      );
+      set({ pages: updatedPages });
+      if (activePageId === id) {
+        set({ shapes: [...get().shapes] });
+      }
+      saveStateToLocalStorage(updatedPages, activePageId);
+    },
+
+    updatePageName: (id, name) => {
+      const { pages, activePageId } = get();
+      const updatedPages = pages.map(p => 
+        p.id === id ? { ...p, name } : p
+      );
+      set({ pages: updatedPages });
+      saveStateToLocalStorage(updatedPages, activePageId);
+    },
+
+    duplicatePage: (id) => {
+      const { pages, activePageId } = get();
+      const syncedPages = pages.map((p) => 
+        p.id === activePageId 
+          ? { ...p, shapes: get().shapes, past: get().past, future: get().future } 
+          : p
+      );
+
+      const pageToDuplicate = syncedPages.find(p => p.id === id)!;
+      const newPageId = `page_${Date.now()}`;
+      const newPage: Page = {
+        ...pageToDuplicate,
+        id: newPageId,
+        name: `${pageToDuplicate.name} (Copy)`,
+        shapes: cloneShapes(pageToDuplicate.shapes),
+        past: [],
+        future: [],
+      };
+
+      const index = syncedPages.findIndex(p => p.id === id);
+      const updatedPages = [...syncedPages];
+      updatedPages.splice(index + 1, 0, newPage);
+
+      set({
+        pages: updatedPages,
+        activePageId: newPageId,
+        shapes: newPage.shapes,
+        past: [],
+        future: [],
+        selectedId: null,
+      });
+      saveStateToLocalStorage(updatedPages, newPageId);
+    },
+
+    loadProject: (loadedPages, loadedActivePageId) => {
+      if (loadedPages.length === 0) return;
+      const activeId = loadedActivePageId && loadedPages.some(p => p.id === loadedActivePageId)
+        ? loadedActivePageId
+        : loadedPages[0]!.id;
+      const activePage = loadedPages.find(p => p.id === activeId)!;
+
+      set({
+        pages: loadedPages,
+        activePageId: activeId,
+        shapes: activePage.shapes || [],
+        past: activePage.past || [],
+        future: activePage.future || [],
+        selectedId: null,
+      });
+      saveStateToLocalStorage(loadedPages, activeId);
+    },
+
+    // Shapes actions
+    setSelectedId: (id) => set({ selectedId: id }),
+
+    saveToHistory: () => {
+      const { shapes, past } = get();
+      syncPagesAndSave({
+        past: [...past, cloneShapes(shapes)],
+        future: [],
+      });
+    },
+
+    addShape: (shapeProps) => {
+      const { saveToHistory, shapes } = get();
+      saveToHistory();
+
+      const newShape: Shape = {
+        ...shapeProps,
+        id: `${shapeProps.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+
+      syncPagesAndSave({
+        shapes: [...shapes, newShape],
+        selectedId: newShape.id,
+      });
+    },
+
+    updateShape: (id, newProps, skipHistory = false) => {
+      const { saveToHistory, shapes } = get();
+      if (!skipHistory) saveToHistory();
+
+      syncPagesAndSave({
+        shapes: shapes.map((s) => (s.id === id ? { ...s, ...newProps } : s)),
+      });
+    },
+
+    deleteShape: (id) => {
+      const { saveToHistory, shapes, selectedId } = get();
+      saveToHistory();
+
+      syncPagesAndSave({
+        shapes: shapes.filter((s) => s.id !== id),
+        selectedId: selectedId === id ? null : selectedId,
+      });
+    },
+
+    clearCanvas: () => {
+      const { saveToHistory } = get();
+      saveToHistory();
+
+      syncPagesAndSave({
+        shapes: [],
+        selectedId: null,
+      });
+    },
+
+    bringToFront: (id) => {
+      const { saveToHistory, shapes } = get();
+      const index = shapes.findIndex((s) => s.id === id);
+      if (index === -1 || index === shapes.length - 1) return;
+
+      saveToHistory();
+      const newShapes = cloneShapes(shapes);
+      const [element] = newShapes.splice(index, 1);
+      if (element) newShapes.push(element);
+
+      syncPagesAndSave({ shapes: newShapes });
+    },
+
+    sendToBack: (id) => {
+      const { saveToHistory, shapes } = get();
+      const index = shapes.findIndex((s) => s.id === id);
+      if (index === -1 || index === 0) return;
+
+      saveToHistory();
+      const newShapes = cloneShapes(shapes);
+      const [element] = newShapes.splice(index, 1);
+      if (element) newShapes.unshift(element);
+
+      syncPagesAndSave({ shapes: newShapes });
+    },
+
+    moveUp: (id) => {
+      const { saveToHistory, shapes } = get();
+      const index = shapes.findIndex((s) => s.id === id);
+      if (index === -1 || index === shapes.length - 1) return;
+
+      saveToHistory();
+      const newShapes = cloneShapes(shapes);
+      const temp = newShapes[index];
+      newShapes[index] = newShapes[index + 1]!;
+      newShapes[index + 1] = temp!;
+
+      syncPagesAndSave({ shapes: newShapes });
+    },
+
+    moveDown: (id) => {
+      const { saveToHistory, shapes } = get();
+      const index = shapes.findIndex((s) => s.id === id);
+      if (index === -1 || index === 0) return;
+
+      saveToHistory();
+      const newShapes = cloneShapes(shapes);
+      const temp = newShapes[index];
+      newShapes[index] = newShapes[index - 1]!;
+      newShapes[index - 1] = temp!;
+
+      syncPagesAndSave({ shapes: newShapes });
+    },
+
+    undo: () => {
+      const { past, shapes } = get();
+      if (past.length === 0) return;
+
+      const previous = past[past.length - 1]!;
+      const newPast = past.slice(0, -1);
+
+      syncPagesAndSave({
+        past: newPast,
+        shapes: previous,
+        future: [cloneShapes(shapes), ...get().future],
+      });
+    },
+
+    redo: () => {
+      const { future, shapes, past } = get();
+      if (future.length === 0) return;
+
+      const next = future[0]!;
+      const newFuture = future.slice(1);
+
+      syncPagesAndSave({
+        past: [...past, cloneShapes(shapes)],
+        shapes: next,
+        future: newFuture,
+      });
+    },
+
+    loadTemplate: (newShapes) => {
+      const { saveToHistory } = get();
+      saveToHistory();
+      const shapesWithIds = newShapes.map((s, index) => ({
+        ...s,
+        id: `${s.type}_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 5)}`
+      }));
+      syncPagesAndSave({
+        shapes: shapesWithIds,
+        selectedId: null,
+        future: []
+      });
+    },
+  };
+});
