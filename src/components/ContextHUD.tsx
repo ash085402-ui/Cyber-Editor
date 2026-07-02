@@ -3,6 +3,8 @@ import { Trash2, Copy, ArrowUpToLine, ArrowDownToLine, ChevronUp, ChevronDown, T
 import { useCanvasStore, type Shape } from '../store/canvasStore';
 
 export const ContextHUD: React.FC = () => {
+  const replaceImageRef = React.useRef<HTMLInputElement>(null);
+
   const { 
     selectedId, 
     shapes, 
@@ -56,14 +58,51 @@ export const ContextHUD: React.FC = () => {
     deleteShape(selectedShape.id);
   };
 
+  const handleReplaceImageClick = () => {
+    replaceImageRef.current?.click();
+  };
+
+  const handleReplaceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          updateShape(selectedShape.id, { src: event.target.result as string });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const hasFill = selectedShape.type !== 'image';
 
   return (
     <div className="floating-hud glass-panel">
+      <input
+        type="file"
+        ref={replaceImageRef}
+        style={{ display: 'none' }}
+        accept="image/*"
+        onChange={handleReplaceImageChange}
+      />
       {/* Title / Indicator */}
       <div className="hud-section">
         <span className="hud-title">{selectedShape.type}</span>
       </div>
+
+      {selectedShape.type === 'image' && (
+        <div className="hud-section">
+          <button 
+            className="hud-button" 
+            onClick={handleReplaceImageClick} 
+            title="Փոխել պատկերը"
+            style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
+          >
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>ՓՈԽԵԼ ՆԿԱՐԸ (REPLACE)</span>
+          </button>
+        </div>
+      )}
 
       {/* Fill Color Picker */}
       {hasFill && (

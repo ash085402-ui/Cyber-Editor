@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface Shape {
   id: string;
-  type: 'rect' | 'circle' | 'text' | 'image' | 'star';
+  type: 'rect' | 'circle' | 'text' | 'image' | 'star' | 'triangle';
   x: number;
   y: number;
   width: number;

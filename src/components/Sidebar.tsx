@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import {
-  Home,
   LogOut,
   Sparkles,
   Menu,
@@ -24,22 +23,9 @@ const GoogleIcon: React.FC = () => (
   </svg>
 );
 
-const GALLERY_IMAGES = [
-  {
-    id: 'img1',
-    src: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=300',
-    name: 'Abstract Blue'
-  },
-  {
-    id: 'img2',
-    src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300',
-    name: 'Minimal'
-  }
-];
-
 export const Sidebar: React.FC = () => {
   const {
-    setSelectedId,
+    setSelectedId: _setSelectedId,
     addShape,
     loadProject,
     sidebarOpen,
@@ -49,6 +35,7 @@ export const Sidebar: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('isLoggedIn') === 'true';
@@ -150,22 +137,34 @@ export const Sidebar: React.FC = () => {
     showToast('Դուրս եկաք');
   };
 
-  const handleAddGalleryImage = (src: string) => {
-    addShape({
-      type: 'image',
-      x: 200,
-      y: 200,
-      width: 200,
-      height: 200,
-      fill: '',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 1,
-      src,
-      glowColor: '#4f46e5',
-      glowBlur: 0
-    });
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          addShape({
+            type: 'image',
+            x: 200,
+            y: 200,
+            width: 200,
+            height: 200,
+            fill: '',
+            stroke: '',
+            strokeWidth: 0,
+            rotation: 0,
+            opacity: 1,
+            src: event.target.result as string,
+            glowColor: '#4f46e5',
+            glowBlur: 0
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
   };
 
   const handleSelectTemplate = (url: string) => {
@@ -298,38 +297,17 @@ export const Sidebar: React.FC = () => {
 
         <button
           className="hud-button w-full"
-          onClick={() => {
-            setSelectedId(null);
-            window.dispatchEvent(new Event('reset-canvas'));
-          }}
+          onClick={() => imageInputRef.current?.click()}
         >
-          <Home size={16} /> Գլխավոր
+          <ImageIcon size={16} style={{ marginRight: '6px' }} /> Բացել նկարը
         </button>
 
         <button
           className="hud-button w-full"
           onClick={() => setShowTemplatesModal(true)}
         >
-          <Sparkles size={16} /> Ձևանմուշներ (Templates)
+          <Sparkles size={16} style={{ marginRight: '6px' }} /> Ձևանմուշներ
         </button>
-
-        <div className="mt-5">
-          <div className="flex gap-2">
-            <ImageIcon size={15} /> Պատկերասրահ
-          </div>
-
-          <div className="gallery-grid">
-            {GALLERY_IMAGES.map((img) => (
-              <img
-                key={img.id}
-                src={img.src}
-                alt={img.name}
-                className="gallery-item"
-                onClick={() => handleAddGalleryImage(img.src)}
-              />
-            ))}
-          </div>
-        </div>
 
         <input
           type="file"
@@ -337,6 +315,14 @@ export const Sidebar: React.FC = () => {
           style={{ display: 'none' }}
           accept=".json"
           onChange={handleLoadProjectFile}
+        />
+
+        <input
+          type="file"
+          ref={imageInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleImageFileChange}
         />
 
         <div className="mt-auto" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

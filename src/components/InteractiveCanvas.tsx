@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer } from 'react-konva';
-import { Undo2, Redo2, Trash2, Download, FileText } from 'lucide-react';
+import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer, RegularPolygon } from 'react-konva';
+import { Undo2, Redo2, Trash2, Download } from 'lucide-react';
 import { useCanvasStore, type Shape } from '../store/canvasStore';
+import { ExportModal } from './ExportModal';
 
 // Custom Image Component to handle image loading
 interface CanvasImageProps {
@@ -87,8 +88,6 @@ export const InteractiveCanvas: React.FC = () => {
     past,
     future,
     clearCanvas,
-    a4Mode,
-    setA4Mode,
     pages,
     activePageId,
     sidebarOpen
@@ -103,6 +102,7 @@ export const InteractiveCanvas: React.FC = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isMiddleMouseDown, setIsMiddleMouseDown] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Dynamic Canvas dimensions to account for left sidebar (if open) and right panel (260px)
   const [canvasSize, setCanvasSize] = useState({
@@ -184,7 +184,7 @@ export const InteractiveCanvas: React.FC = () => {
             const shapeToCopy = shapes.find(s => s.id === selectedId);
             if (shapeToCopy) {
               e.preventDefault();
-              const { id, ...cleanShape } = shapeToCopy;
+              const { id: _, ...cleanShape } = shapeToCopy;
               setCopiedShape(cleanShape);
             }
           }
@@ -394,68 +394,7 @@ export const InteractiveCanvas: React.FC = () => {
     }
   };
 
-  // High resolution canvas export as PNG (without selection bounds or render delays)
-  const handleExport = () => {
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    if (shapes.length === 0) {
-      alert("Կտավը դատարկ է։");
-      return;
-    }
-
-    // Hide transformer temporarily so selection bounds don't appear in the image
-    const transformer = transformerRef.current;
-    let originalNodes = [];
-    if (transformer) {
-      originalNodes = transformer.nodes();
-      transformer.nodes([]);
-      transformer.getLayer().batchDraw();
-    }
-
-    // Store current position and scale
-    const oldScale = stage.scaleX();
-    const oldPos = stage.position();
-
-    // Reset zoom and pan for clean export relative to top-left (0,0)
-    stage.scale({ x: 1, y: 1 });
-    stage.position({ x: 0, y: 0 });
-    stage.batchDraw();
-
-    // Export parameters - crop to active page dimensions if A4 mode is active
-    const exportParams = a4Mode ? {
-      x: 150,
-      y: 100,
-      width: activePage.width,
-      height: activePage.height,
-      pixelRatio: 2,
-      mimeType: 'image/png'
-    } : {
-      pixelRatio: 2,
-      mimeType: 'image/png'
-    };
-
-    // Export using pixelRatio: 2 for high density rendering
-    const dataURL = stage.toDataURL(exportParams);
-
-    // Restore zoom and pan
-    stage.scale({ x: oldScale, y: oldScale });
-    stage.position(oldPos);
-    stage.batchDraw();
-
-    // Restore transformer selection nodes
-    if (transformer && originalNodes.length > 0) {
-      transformer.nodes(originalNodes);
-      transformer.getLayer().batchDraw();
-    }
-    
-    const link = document.createElement('a');
-    link.download = `cyber-design-${Date.now()}.png`;
-    link.href = dataURL;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Export functionality is now handled by the ExportModal component
 
   // Dynamic CSS variables for grid background sync
   const gridStyle: React.CSSProperties = {
@@ -510,22 +449,12 @@ export const InteractiveCanvas: React.FC = () => {
         <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
         <button 
           className="hud-button" 
-          onClick={handleExport} 
-          title="Արտահանել PNG (High Res)"
+          onClick={() => setIsExportOpen(true)} 
+          title="Արտահանել կամ Պահպանել"
           style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
         >
           <Download size={14} style={{ marginRight: '6px' }} />
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>EXPORT PNG</span>
-        </button>
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
-        <button 
-          className="hud-button" 
-          onClick={() => setA4Mode(!a4Mode)} 
-          title="A4 Էջի Ռեժիմ"
-          style={a4Mode ? { borderColor: 'var(--purple)', color: 'var(--purple)', background: 'rgba(79, 70, 229, 0.08)' } : {}}
-        >
-          <FileText size={14} style={{ marginRight: '6px' }} />
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>A4 MODE: {a4Mode ? 'ON' : 'OFF'}</span>
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>EXPORT / SAVE AS</span>
         </button>
       </div>
 
@@ -574,21 +503,19 @@ export const InteractiveCanvas: React.FC = () => {
         onDragEnd={handleStageDrag}
       >
         <Layer>
-          {a4Mode && (
-            <Rect
-              x={150}
-              y={100}
-              width={activePage.width}
-              height={activePage.height}
-              fill="#ffffff"
-              stroke="#e2e8f0"
-              strokeWidth={1}
-              shadowColor="rgba(0,0,0,0.15)"
-              shadowBlur={20}
-              shadowOpacity={0.4}
-              listening={false}
-            />
-          )}
+          <Rect
+            x={150}
+            y={100}
+            width={activePage.width}
+            height={activePage.height}
+            fill="#ffffff"
+            stroke="#e2e8f0"
+            strokeWidth={1}
+            shadowColor="rgba(0,0,0,0.15)"
+            shadowBlur={20}
+            shadowOpacity={0.4}
+            listening={false}
+          />
           {shapes.map((shape) => {
             const isSelected = shape.id === selectedId;
             const commonProps = {
@@ -710,6 +637,39 @@ export const InteractiveCanvas: React.FC = () => {
               );
             }
 
+            if (shape.type === 'triangle') {
+              return (
+                <RegularPolygon
+                  key={shape.id}
+                  {...commonProps}
+                  sides={3}
+                  radius={shape.width / 2}
+                  x={shape.x + shape.width / 2}
+                  y={shape.y + shape.width / 2}
+                  onDragEnd={(e: any) => {
+                    updateShape(shape.id, {
+                      x: e.target.x() - shape.width / 2,
+                      y: e.target.y() - shape.width / 2,
+                    });
+                  }}
+                  onTransformEnd={(e: any) => {
+                    const node = e.target;
+                    const scaleX = node.scaleX();
+                    const radius = node.radius() * scaleX;
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    updateShape(shape.id, {
+                      x: node.x() - radius,
+                      y: node.y() - radius,
+                      width: radius * 2,
+                      height: radius * 2,
+                      rotation: node.rotation(),
+                    });
+                  }}
+                />
+              );
+            }
+
             if (shape.type === 'text') {
               return (
                 <Text
@@ -763,6 +723,15 @@ export const InteractiveCanvas: React.FC = () => {
           )}
         </Layer>
       </Stage>
+      {isExportOpen && (
+        <ExportModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          stageRef={stageRef}
+          shapes={shapes}
+          activePage={activePage}
+        />
+      )}
     </div>
   );
 };

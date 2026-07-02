@@ -4,6 +4,7 @@ import { RadialMenu } from './components/RadialMenu';
 import { ContextHUD } from './components/ContextHUD';
 import { Sidebar } from './components/Sidebar';
 import { RightPanel } from './components/RightPanel';
+import { Toolbar } from './components/Toolbar';
 import './index.css';
 
 function App() {
@@ -23,6 +24,9 @@ function App() {
 
       {/* Right-click/Touch Radial Menu */}
       <RadialMenu />
+
+      {/* Bottom Floating Toolbar */}
+      <Toolbar />
     </React.Fragment>
   );
 }
