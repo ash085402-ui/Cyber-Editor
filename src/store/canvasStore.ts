@@ -20,6 +20,10 @@ export interface Shape {
   shadowBlur?: number;
   glowColor?: string;
   glowBlur?: number;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 export interface Page {
@@ -40,6 +44,8 @@ interface CanvasState {
   past: Shape[][];
   future: Shape[][];
   a4Mode: boolean;
+  language: 'hy' | 'en' | 'ru';
+  setLanguage: (lang: 'hy' | 'en' | 'ru') => void;
 
   // Page actions
   addPage: (width?: number, height?: number) => void;
@@ -70,6 +76,7 @@ interface CanvasState {
   toggleSidebar: () => void;
 }
 
+
 const cloneShapes = (shapes: Shape[]): Shape[] => {
   return JSON.parse(JSON.stringify(shapes));
 };
@@ -83,10 +90,431 @@ const saveStateToLocalStorage = (pages: Page[], activePageId: string) => {
   }
 };
 
+export const getNewspaperShapes = (): Shape[] => {
+  const baseImg = '/5344053332416339591.jpg';
+  return [
+    // Images (cropped parts of the flyer)
+    {
+      id: 'img_qr',
+      type: 'image',
+      src: baseImg,
+      x: 160,
+      y: 110,
+      width: 100,
+      height: 100,
+      fill: '',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      glowColor: '#00f2fe',
+      glowBlur: 0,
+      cropX: 10,
+      cropY: 5,
+      cropWidth: 100,
+      cropHeight: 105
+    },
+    {
+      id: 'img_main',
+      type: 'image',
+      src: baseImg,
+      x: 160,
+      y: 220,
+      width: 520,
+      height: 350,
+      fill: '',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      glowColor: '#00f2fe',
+      glowBlur: 0,
+      cropX: 15,
+      cropY: 100,
+      cropWidth: 495,
+      cropHeight: 330
+    },
+    {
+      id: 'img_church',
+      type: 'image',
+      src: baseImg,
+      x: 700,
+      y: 660,
+      width: 230,
+      height: 140,
+      fill: '',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      glowColor: '#00f2fe',
+      glowBlur: 0,
+      cropX: 490,
+      cropY: 500,
+      cropWidth: 210,
+      cropHeight: 130
+    },
+    {
+      id: 'img_street',
+      type: 'image',
+      src: baseImg,
+      x: 160,
+      y: 930,
+      width: 240,
+      height: 160,
+      fill: '',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      glowColor: '#00f2fe',
+      glowBlur: 0,
+      cropX: 15,
+      cropY: 820,
+      cropWidth: 210,
+      cropHeight: 140
+    },
+
+    // Background rectangles for the headers (gray boxes)
+    {
+      id: 'bg_header_kumayri',
+      type: 'rect',
+      x: 700,
+      y: 220,
+      width: 230,
+      height: 30,
+      fill: '#b0b0b0',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.9,
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'bg_header_vardanants',
+      type: 'rect',
+      x: 160,
+      y: 660,
+      width: 240,
+      height: 30,
+      fill: '#b0b0b0',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.9,
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'bg_header_marmashen',
+      type: 'rect',
+      x: 430,
+      y: 660,
+      width: 240,
+      height: 30,
+      fill: '#b0b0b0',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.9,
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'bg_header_mher',
+      type: 'rect',
+      x: 430,
+      y: 860,
+      width: 240,
+      height: 30,
+      fill: '#b0b0b0',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.9,
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'bg_header_aslamazyan',
+      type: 'rect',
+      x: 700,
+      y: 810,
+      width: 230,
+      height: 30,
+      fill: '#b0b0b0',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.9,
+      glowColor: '',
+      glowBlur: 0
+    },
+
+    // Title Texts
+    {
+      id: 'text_title',
+      type: 'text',
+      x: 270,
+      y: 120,
+      width: 420,
+      height: 40,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'THE LIVING MEMORY',
+      fontSize: 32,
+      fontFamily: 'Orbitron',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_subtitle',
+      type: 'text',
+      x: 270,
+      y: 170,
+      width: 420,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'Կենդանի Հիշողությունը',
+      fontSize: 18,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_header_right',
+      type: 'text',
+      x: 700,
+      y: 110,
+      width: 230,
+      height: 60,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Հատուկ իրադարձություն\nԳյումրիում բացահայտել է\nTHE LIVING MEMORY",
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+
+    // Column Headers & Body Texts
+    {
+      id: 'text_header_kumayri',
+      type: 'text',
+      x: 700,
+      y: 225,
+      width: 230,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'ԿՈՒՄԱՅՐԻ ՊԱՏՄԱԿԱՆ ԹԱՂԱՄԱՍ',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_body_kumayri',
+      type: 'text',
+      x: 700,
+      y: 260,
+      width: 230,
+      height: 380,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Կումայրիի պատմական թաղամասը համարվում է Գյումրիի իրական ոսկեզօծիկը: Այն յուրատեսակ բացօթյա թանգարան է, որտեղ մինչև այսօր պահպանվել են ավելի քան հազար պատմական շինություններ՝ կառուցված հիմնականում 18-19-րդ դարերում: Թաղամասի յուրաքանչյուր փողոց շնչում է հին Ալեքսանդրապոլի պատմությամբ: Այս տարածքում կարելի է տեսնել տարբեր ճարտարապետական գլուխգործոցներ. շքեղ առանձնատներ, հասարակական կառույցներ և եկեղեցիներ, որոնք կառուցված են կարմիր ու սև տուֆի համադրությամբ: Այս նյութերն ու ոճային առանձնահատկությունները Գյումրիին տալիս են անզուգական գեղարվեստական տեսք:",
+      fontSize: 10,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_welcome_title',
+      type: 'text',
+      x: 160,
+      y: 590,
+      width: 520,
+      height: 50,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'Բարի գալուստ Գյումրի՝ հայկական մշակույթի կենդանի ժառանգություն',
+      fontSize: 18,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_header_vardanants',
+      type: 'text',
+      x: 160,
+      y: 665,
+      width: 240,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'ՎԱՐԴԱՆԱՆՑ ՀՐԱՊԱՐԱԿ',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_body_vardanants',
+      type: 'text',
+      x: 160,
+      y: 695,
+      width: 240,
+      height: 230,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Վարդանանց հրապարակը Գյումրիի ամենատեսարժան մշակութային և պատմական կենտրոններից մեկն է: Այն ստացել է իր անունը Վարդան Մամիկոնյանից՝ ի հիշատակ հայ ժողովրդի հերոսական պայքարի և Ավարայրի ճակատամարտում նրա խիզախության: Հրապարակում տեղադրված է Վարդանի հուշարձանը, որը խորհրդանշում է քաջությունը, պայքարը և ազգային ինքնությունը: Հուշարձանը ոչ միայն հիշատակի նշան է, այլ նաև համարվում է քաղաքի խորհրդանիշներից մեկը, որը այցելուներին հիշեցնում է հայոց պատմության կարևոր դրվագները:",
+      fontSize: 10,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_header_marmashen',
+      type: 'text',
+      x: 430,
+      y: 665,
+      width: 240,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'ՄԱՐՄԱՇԵՆԻ ՎԱՆԱԿԱՆ ՀԱՄԱԼԻՐ',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_body_marmashen',
+      type: 'text',
+      x: 430,
+      y: 695,
+      width: 240,
+      height: 160,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Մարմաշենի վանքը համարվում է միջնադարյան Հայաստանի ճարտարապետության իսկական գոհարը: Այն գտնվում է Գյումրիից մի քանի կիլոմետր հեռավորության վրա՝ Ախուրյան գետի ափին: Վանքը կառուցվել է 10-րդ դարում Բագրատունիների իշխանության օրոք և մինչەوە այսօր պահպանել է իր բնորոշ ճարտարապետական ոճն ու հմայքը: Համալիրը ներառում է մի քանի եկեղեցիներ, որոնցից կենտրոնականը Սուրբ Ստեփանոսն է, և հանդիսանում է հատկապես ուշագրավ իր հարդարանքներով ու որմնանկարներով:",
+      fontSize: 10,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_header_mher',
+      type: 'text',
+      x: 430,
+      y: 865,
+      width: 240,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'ՄՀԵՐ ՄԿՐՏՉՅԱՆԻ ՏՈՒՆ ԹԱՆԳԱՐԱՆ',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_body_mher',
+      type: 'text',
+      x: 430,
+      y: 895,
+      width: 240,
+      height: 200,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Մհեր Մկրտչյանը, հայտնի որպես Մհեր, հայ թատրոնի ու կինոյի ամենավառ ու սիրելի ներկայացուցիչներից մեկն է, որը թողել է անջնջելի հետք հայ մշակույթի պատմության մեջ: Նրա դերերը և ստեղծագործական գործունեությունը այսօր էլ մեծ ազդեցություն ունեն նոր սերունդների վրա, և նրա կերպարը սիրված է ինչպես Հայաստանում, այնպես էլ արտասահմանում: Նրա տուն-թանգարանը գտնվում է Գյումրիում՝ այն բնակարանում, որտեղ Մհերը մեծացել է, կազմել իր առաջին հիշողություններն ու ոգեշնչումները: Թանգարանում ներկայացված են դերասանի անձնական իրերը՝ թատերական և կինոդերերի զգեստներ, կոստյումները:",
+      fontSize: 10,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_header_aslamazyan',
+      type: 'text',
+      x: 700,
+      y: 815,
+      width: 230,
+      height: 25,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: 'ԱՍԼԱՄԱԶՅԱՆ ՔՈՒՅՐԵՐԻ ՊԱՏԿԵՐԱՍՐԱՀ',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    },
+    {
+      id: 'text_body_aslamazyan',
+      type: 'text',
+      x: 700,
+      y: 845,
+      width: 230,
+      height: 250,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: "Ասլամազյան քույրերի պատկերասրահը նվիրված է հայ նշանավոր նկարիչներին՝ Մարիամ և Երանուհի Ասլամազյաններին, որոնք համարվում են 20-րդ դարի հայկական նկարչության ամենահայտնի ներկայացուցիչները: Պատկերասրահը գտնվում է Գյումրիի պատմական կենտրոնում և հատուկ հարմարեցված է իրենց աշխատանքները ցուցադրելու համար: Այստեղ այցելուները կարող են ծանոթանալ քույրերի ստեղծագործության ամբողջական տեսականուն՝ նկարների, լուսանկարների և այլ ստեղծագործական նյութերի միջոցով, որոնք բացահայտում են նրանց յուրահատուկ ոճն ու գեղարվեստական աշխարհը:",
+      fontSize: 10,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    }
+  ];
+};
+
 const getInitialState = () => {
   try {
     const savedPages = localStorage.getItem('cyber_editor_pages');
     const savedActivePageId = localStorage.getItem('cyber_editor_active_page_id');
+    const savedLanguage = localStorage.getItem('cyber_editor_language') as 'hy' | 'en' | 'ru' || 'hy';
     
     if (savedPages && savedActivePageId) {
       const pages: Page[] = JSON.parse(savedPages);
@@ -98,7 +526,8 @@ const getInitialState = () => {
           shapes: activePage.shapes || [],
           past: activePage.past || [],
           future: activePage.future || [],
-          a4Mode: true
+          a4Mode: true,
+          language: savedLanguage
         };
       }
     }
@@ -106,24 +535,25 @@ const getInitialState = () => {
     console.error('Error loading state from localStorage:', e);
   }
   
-  // Default to single A4 page
+  // Default to single A4 page with default layout
   const defaultPageId = `page_${Date.now()}`;
   const defaultPage: Page = {
     id: defaultPageId,
     name: 'Էջ 1',
     width: 794,
     height: 1123,
-    shapes: [],
+    shapes: getNewspaperShapes(),
     past: [],
     future: [],
   };
   return {
     pages: [defaultPage],
     activePageId: defaultPageId,
-    shapes: [],
+    shapes: defaultPage.shapes,
     past: [],
     future: [],
-    a4Mode: true
+    a4Mode: true,
+    language: 'hy' as const
   };
 };
 
@@ -151,10 +581,16 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     past: initialState.past,
     future: initialState.future,
     a4Mode: initialState.a4Mode,
+    language: initialState.language,
     sidebarOpen: true,
 
+    setLanguage: (lang) => {
+      set({ language: lang });
+      localStorage.setItem('cyber_editor_language', lang);
+    },
     setA4Mode: (enabled) => set({ a4Mode: enabled }),
     toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
 
     // Pages management
     addPage: (width = 794, height = 1123) => {

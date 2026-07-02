@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Copy, ArrowUpToLine, ArrowDownToLine, ChevronUp, ChevronDown, Type } from 'lucide-react';
 import { useCanvasStore, type Shape } from '../store/canvasStore';
+import { translations } from '../store/translations';
 
 export const ContextHUD: React.FC = () => {
   const replaceImageRef = React.useRef<HTMLInputElement>(null);
@@ -14,12 +15,16 @@ export const ContextHUD: React.FC = () => {
     sendToBack, 
     moveUp, 
     moveDown, 
-    addShape 
+    addShape,
+    language
   } = useCanvasStore();
 
   const selectedShape = shapes.find((s) => s.id === selectedId);
 
   if (!selectedShape) return null;
+
+  const t = translations[language];
+
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateShape(selectedShape.id, { fill: e.target.value });
@@ -76,6 +81,7 @@ export const ContextHUD: React.FC = () => {
   };
 
   const hasFill = selectedShape.type !== 'image';
+  const shapeTypeLabel = (t as any)[selectedShape.type] || selectedShape.type;
 
   return (
     <div className="floating-hud glass-panel">
@@ -88,7 +94,7 @@ export const ContextHUD: React.FC = () => {
       />
       {/* Title / Indicator */}
       <div className="hud-section">
-        <span className="hud-title">{selectedShape.type}</span>
+        <span className="hud-title">{shapeTypeLabel}</span>
       </div>
 
       {selectedShape.type === 'image' && (
@@ -96,17 +102,17 @@ export const ContextHUD: React.FC = () => {
           <button 
             className="hud-button" 
             onClick={handleReplaceImageClick} 
-            title="Փոխել պատկերը"
+            title={t.replaceImage}
             style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
           >
-            <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>ՓՈԽԵԼ ՆԿԱՐԸ (REPLACE)</span>
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>{t.replaceImage.toUpperCase()}</span>
           </button>
         </div>
       )}
 
       {/* Fill Color Picker */}
       {hasFill && (
-        <div className="hud-section" title="Գույն">
+        <div className="hud-section" title={t.rect}>
           <div className="color-picker-wrapper">
             <input 
               type="color" 
@@ -119,8 +125,8 @@ export const ContextHUD: React.FC = () => {
       )}
 
       {/* Cyber Opacity Control */}
-      <div className="hud-section" title="Թափանցիկություն">
-        <span className="hud-title">Opacity</span>
+      <div className="hud-section" title={t.opacity}>
+        <span className="hud-title">{t.opacity}</span>
         <input 
           type="range" 
           className="cyber-slider" 
@@ -133,8 +139,8 @@ export const ContextHUD: React.FC = () => {
       </div>
 
       {/* Cyber Neon Glow Controls */}
-      <div className="hud-section" title="Նեոնային լուսավորություն">
-        <span className="hud-title">Glow</span>
+      <div className="hud-section" title={t.glow}>
+        <span className="hud-title">{t.glow}</span>
         <div className="color-picker-wrapper" style={{ marginRight: '8px' }}>
           <input 
             type="color" 
@@ -167,7 +173,7 @@ export const ContextHUD: React.FC = () => {
             step="1" 
             value={selectedShape.fontSize || 24} 
             onChange={handleFontSizeChange}
-            title="Տառաչափ"
+            title={t.fontSize}
             style={{ width: '60px', marginRight: '10px' }}
           />
 
@@ -196,26 +202,26 @@ export const ContextHUD: React.FC = () => {
 
       {/* Layers Panel */}
       <div className="hud-section">
-        <button className="hud-button" onClick={() => moveUp(selectedShape.id)} title="Բարձրացնել շերտը">
+        <button className="hud-button" onClick={() => moveUp(selectedShape.id)} title={t.moveUp}>
           <ChevronUp size={16} />
         </button>
-        <button className="hud-button" onClick={() => moveDown(selectedShape.id)} title="Իջեցնել շերտը">
+        <button className="hud-button" onClick={() => moveDown(selectedShape.id)} title={t.moveDown}>
           <ChevronDown size={16} />
         </button>
-        <button className="hud-button" onClick={() => bringToFront(selectedShape.id)} title="Բերել առաջին պլան">
+        <button className="hud-button" onClick={() => bringToFront(selectedShape.id)} title={t.bringToFront}>
           <ArrowUpToLine size={16} />
         </button>
-        <button className="hud-button" onClick={() => sendToBack(selectedShape.id)} title="Տանել հետին պլան">
+        <button className="hud-button" onClick={() => sendToBack(selectedShape.id)} title={t.sendToBack}>
           <ArrowDownToLine size={16} />
         </button>
       </div>
 
       {/* Duplicate and Delete Actions */}
       <div className="hud-section">
-        <button className="hud-button" onClick={handleDuplicate} title="Կրկնօրինակել տարրը">
+        <button className="hud-button" onClick={handleDuplicate} title={t.duplicate}>
           <Copy size={16} />
         </button>
-        <button className="hud-button danger" onClick={handleDelete} title="Ջնջել տարրը">
+        <button className="hud-button danger" onClick={handleDelete} title={t.delete}>
           <Trash2 size={16} />
         </button>
       </div>

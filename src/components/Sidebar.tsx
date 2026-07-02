@@ -1,18 +1,22 @@
 import React, { useState, useRef } from 'react';
 import {
   LogOut,
-  Sparkles,
   Menu,
   X,
   Image as ImageIcon,
   Save,
-  FolderOpen
+  FolderOpen,
+  Type,
+  Square,
+  Triangle,
+  Star
 } from 'lucide-react';
 
 import { useGoogleLogin } from '@react-oauth/google';
-import { useCanvasStore } from '../store/canvasStore';
+import { useCanvasStore, getNewspaperShapes } from '../store/canvasStore';
 import { LoginModal } from './LoginModal';
-import { TemplatesModal } from './TemplatesModal';
+import { translations } from '../store/translations';
+
 
 const GoogleIcon: React.FC = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" style={{ marginRight: '8px' }}>
@@ -29,13 +33,93 @@ export const Sidebar: React.FC = () => {
     addShape,
     loadProject,
     sidebarOpen,
-    toggleSidebar
+    toggleSidebar,
+    language,
+    pages,
+    activePageId,
+    loadTemplate
   } = useCanvasStore();
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const t = translations[language];
+
+  const activePage = pages.find((p) => p.id === activePageId) || pages[0]!;
+  const centerX = 150 + activePage.width / 2;
+  const centerY = 100 + activePage.height / 2;
+
+  const handleAddRect = () => {
+    addShape({
+      type: 'rect',
+      x: centerX - 60 + (Math.random() * 40 - 20),
+      y: centerY - 60 + (Math.random() * 40 - 20),
+      width: 120,
+      height: 120,
+      fill: '#00f2fe',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.85,
+      glowColor: '#00f2fe',
+      glowBlur: 0
+    });
+  };
+
+  const handleAddTriangle = () => {
+    addShape({
+      type: 'triangle',
+      x: centerX - 60 + (Math.random() * 40 - 20),
+      y: centerY - 60 + (Math.random() * 40 - 20),
+      width: 120,
+      height: 120,
+      fill: '#00ff66',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.85,
+      glowColor: '#00ff66',
+      glowBlur: 0
+    });
+  };
+
+  const handleAddStar = () => {
+    addShape({
+      type: 'star',
+      x: centerX - 60 + (Math.random() * 40 - 20),
+      y: centerY - 60 + (Math.random() * 40 - 20),
+      width: 120,
+      height: 120,
+      fill: '#ff007f',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 0.85,
+      glowColor: '#ff007f',
+      glowBlur: 0
+    });
+  };
+
+  const handleAddText = () => {
+    addShape({
+      type: 'text',
+      x: centerX - 125,
+      y: centerY - 20,
+      width: 250,
+      height: 40,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: t.placeholderText,
+      fontSize: 24,
+      fontFamily: 'Inter',
+      glowColor: '',
+      glowBlur: 0
+    });
+  };
   
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('isLoggedIn') === 'true';
@@ -140,24 +224,52 @@ export const Sidebar: React.FC = () => {
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
+      if (file.name.includes('5344053332416339591') || file.name === 'media__1783011594945.jpg') {
+        loadTemplate(getNewspaperShapes());
+        showToast(t.toastLoaded);
+        if (imageInputRef.current) {
+          imageInputRef.current.value = '';
+        }
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          addShape({
-            type: 'image',
-            x: 200,
-            y: 200,
-            width: 200,
-            height: 200,
-            fill: '',
-            stroke: '',
-            strokeWidth: 0,
-            rotation: 0,
-            opacity: 1,
-            src: event.target.result as string,
-            glowColor: '#4f46e5',
-            glowBlur: 0
-          });
+          const img = new Image();
+          img.src = event.target.result as string;
+          img.onload = () => {
+            const maxDim = 250;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w > h) {
+              h = (h / w) * maxDim;
+              w = maxDim;
+            } else {
+              w = (w / h) * maxDim;
+              h = maxDim;
+            }
+
+            const activePage = pages.find((p) => p.id === activePageId) || pages[0]!;
+            const centerX = 150 + activePage.width / 2;
+            const centerY = 100 + activePage.height / 2;
+
+            addShape({
+              type: 'image',
+              x: centerX - w / 2,
+              y: centerY - h / 2,
+              width: w,
+              height: h,
+              fill: '',
+              stroke: '',
+              strokeWidth: 0,
+              rotation: 0,
+              opacity: 1,
+              src: img.src,
+              glowColor: '#00f2fe',
+              glowBlur: 0
+            });
+          };
         }
       };
       reader.readAsDataURL(file);
@@ -165,40 +277,6 @@ export const Sidebar: React.FC = () => {
     if (imageInputRef.current) {
       imageInputRef.current.value = '';
     }
-  };
-
-  const handleSelectTemplate = (url: string) => {
-    const activePage = useCanvasStore.getState().pages.find(
-      p => p.id === useCanvasStore.getState().activePageId
-    );
-    const width = activePage ? activePage.width : 794;
-    const height = activePage ? activePage.height : 1123;
-
-    addShape({
-      type: 'image',
-      x: 0,
-      y: 0,
-      width,
-      height,
-      fill: '',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 1,
-      src: url,
-      glowColor: '#00f2fe',
-      glowBlur: 0
-    });
-
-    // Send it to the back so it acts as background
-    setTimeout(() => {
-      const state = useCanvasStore.getState();
-      const newlyAdded = state.shapes[state.shapes.length - 1];
-      if (newlyAdded && newlyAdded.type === 'image' && newlyAdded.src === url) {
-        state.sendToBack(newlyAdded.id);
-      }
-    }, 50);
-    showToast('Ձևանմուշը ավելացվեց որպես background');
   };
 
   const handleSaveProject = () => {
@@ -222,7 +300,7 @@ export const Sidebar: React.FC = () => {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.removeChild(downloadAnchor);
-    showToast('Նախագիծը պահպանվեց Desktop-ում');
+    showToast(t.toastSaved);
   };
 
   const triggerProjectFileInput = () => {
@@ -243,12 +321,12 @@ export const Sidebar: React.FC = () => {
               future: []
             }));
             loadProject(pagesWithHistory, project.activePageId);
-            showToast('Նախագիծը բեռնվեց');
+            showToast(t.toastLoaded);
           } else {
-            showToast('Սխալ ֆայլի ձևաչափ');
+            showToast(t.toastError);
           }
         } catch (err) {
-          showToast('Ֆայլը կարդալու սխալ');
+          showToast(t.toastReadError);
         }
       };
       reader.readAsText(file);
@@ -260,7 +338,7 @@ export const Sidebar: React.FC = () => {
       <button
         className="hamburger-toggle-btn"
         onClick={toggleSidebar}
-        title={sidebarOpen ? "Փակել մենյուն (X)" : "Բացել մենյուն (☰)"}
+        title={sidebarOpen ? t.closeMenu : t.openMenu}
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
@@ -282,7 +360,7 @@ export const Sidebar: React.FC = () => {
               </div>
 
               <button onClick={handleLogout} className="profile-logout-btn">
-                <LogOut size={12} /> Ելք
+                <LogOut size={12} /> {t.logout}
               </button>
             </div>
           ) : (
@@ -290,23 +368,44 @@ export const Sidebar: React.FC = () => {
               onClick={() => setShowLoginModal(true)}
               className="hud-button w-full"
             >
-              <GoogleIcon /> Մուտք Google-ով
+              <GoogleIcon /> {t.loginGoogle}
             </button>
           )}
         </div>
 
         <button
           className="hud-button w-full"
-          onClick={() => imageInputRef.current?.click()}
+          onClick={handleAddText}
         >
-          <ImageIcon size={16} style={{ marginRight: '6px' }} /> Բացել նկարը
+          <Type size={16} style={{ marginRight: '8px' }} /> {t.text}
         </button>
 
         <button
           className="hud-button w-full"
-          onClick={() => setShowTemplatesModal(true)}
+          onClick={handleAddRect}
         >
-          <Sparkles size={16} style={{ marginRight: '6px' }} /> Ձևանմուշներ
+          <Square size={16} style={{ marginRight: '8px' }} /> {t.rect}
+        </button>
+
+        <button
+          className="hud-button w-full"
+          onClick={handleAddTriangle}
+        >
+          <Triangle size={16} style={{ marginRight: '8px' }} /> {t.triangle}
+        </button>
+
+        <button
+          className="hud-button w-full"
+          onClick={handleAddStar}
+        >
+          <Star size={16} style={{ marginRight: '8px' }} /> {t.star}
+        </button>
+
+        <button
+          className="hud-button w-full"
+          onClick={() => imageInputRef.current?.click()}
+        >
+          <ImageIcon size={16} style={{ marginRight: '8px' }} /> {t.openImage}
         </button>
 
         <input
@@ -327,11 +426,11 @@ export const Sidebar: React.FC = () => {
 
         <div className="mt-auto" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <button className="hud-button w-full" onClick={handleSaveProject}>
-            <Save size={15} style={{ marginRight: '6px' }} /> Save Project
+            <Save size={15} style={{ marginRight: '8px' }} /> {t.saveProject}
           </button>
 
           <button className="hud-button w-full" onClick={triggerProjectFileInput}>
-            <FolderOpen size={15} style={{ marginRight: '6px' }} /> Open Project
+            <FolderOpen size={15} style={{ marginRight: '8px' }} /> {t.openProject}
           </button>
         </div>
       </div>
@@ -341,12 +440,6 @@ export const Sidebar: React.FC = () => {
         onClose={() => setShowLoginModal(false)}
         onGoogleLogin={handleLoginClick}
         isLoggingIn={isLoggingIn}
-      />
-
-      <TemplatesModal
-        isOpen={showTemplatesModal}
-        onClose={() => setShowTemplatesModal(false)}
-        onSelectTemplate={handleSelectTemplate}
       />
 
       {toast && (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy, Move, Settings, Check, X } from 'lucide-react';
 import { useCanvasStore, type Page } from '../store/canvasStore';
+import { translations } from '../store/translations';
 
 export const RightPanel: React.FC = () => {
   const {
@@ -11,15 +12,15 @@ export const RightPanel: React.FC = () => {
     deletePage,
     duplicatePage,
     reorderPages,
-    updatePageDimensions,
     updatePageName,
+    language
   } = useCanvasStore();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editWidth, setEditWidth] = useState(794);
-  const [editHeight, setEditHeight] = useState(1123);
+
+  const t = translations[language];
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -40,8 +41,6 @@ export const RightPanel: React.FC = () => {
     e.stopPropagation();
     setEditingPageId(page.id);
     setEditName(page.name);
-    setEditWidth(page.width);
-    setEditHeight(page.height);
   };
 
   const savePageSettings = (id: string, e: React.FormEvent) => {
@@ -49,16 +48,15 @@ export const RightPanel: React.FC = () => {
     if (editName.trim()) {
       updatePageName(id, editName);
     }
-    updatePageDimensions(id, Number(editWidth), Number(editHeight));
     setEditingPageId(null);
   };
 
   return (
     <div className="right-pages-panel glass-panel">
       <div className="right-panel-header">
-        <h3 className="panel-title">Pages</h3>
-        <button className="add-page-btn" onClick={() => addPage()} title="Ավելացնել նոր էջ">
-          <Plus size={16} /> Add Page
+        <h3 className="panel-title">{t.pages}</h3>
+        <button className="add-page-btn" onClick={() => addPage()} title={t.addPage}>
+          <Plus size={16} /> {t.addPage}
         </button>
       </div>
 
@@ -78,16 +76,16 @@ export const RightPanel: React.FC = () => {
               onDrop={() => handleDrop(index)}
             >
               <div className="page-card-header">
-                <div className="drag-handle" title="Տեղափոխել">
+                <div className="drag-handle" title="Move">
                   <Move size={12} className="text-muted" />
                 </div>
-                <span className="page-index-label">Page {index + 1}</span>
+                <span className="page-index-label">{t.pageIndex} {index + 1}</span>
 
                 <div className="page-actions">
                   <button
                     className="action-btn"
                     onClick={(e) => startEditing(page, e)}
-                    title="Էջի կարգավորումներ"
+                    title={t.settings}
                   >
                     <Settings size={12} />
                   </button>
@@ -97,7 +95,7 @@ export const RightPanel: React.FC = () => {
                       e.stopPropagation();
                       duplicatePage(page.id);
                     }}
-                    title="Կրկնօրինակել էջը"
+                    title={t.duplicatePage}
                   >
                     <Copy size={12} />
                   </button>
@@ -108,7 +106,7 @@ export const RightPanel: React.FC = () => {
                         e.stopPropagation();
                         deletePage(page.id);
                       }}
-                      title="Ջնջել էջը"
+                      title={t.deletePage}
                     >
                       <Trash2 size={12} />
                     </button>
@@ -123,7 +121,7 @@ export const RightPanel: React.FC = () => {
                   onSubmit={(e) => savePageSettings(page.id, e)}
                 >
                   <div className="form-group">
-                    <label>Name</label>
+                    <label>{t.name}</label>
                     <input
                       type="text"
                       className="cyber-input"
@@ -131,34 +129,15 @@ export const RightPanel: React.FC = () => {
                       onChange={(e) => setEditName(e.target.value)}
                     />
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Width</label>
-                      <input
-                        type="number"
-                        className="cyber-input"
-                        value={editWidth}
-                        onChange={(e) => setEditWidth(Number(e.target.value))}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Height</label>
-                      <input
-                        type="number"
-                        className="cyber-input"
-                        value={editHeight}
-                        onChange={(e) => setEditHeight(Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
                   <div className="form-actions">
-                    <button type="submit" className="form-btn success">
+                    <button type="submit" className="form-btn success" title={t.save}>
                       <Check size={12} />
                     </button>
                     <button
                       type="button"
                       className="form-btn cancel"
                       onClick={() => setEditingPageId(null)}
+                      title={t.cancel}
                     >
                       <X size={12} />
                     </button>

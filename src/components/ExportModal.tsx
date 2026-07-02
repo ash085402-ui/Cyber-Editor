@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, Download, FileJson, FileText, Image as ImageIcon } from 'lucide-react';
+import { useCanvasStore } from '../store/canvasStore';
+import { translations } from '../store/translations';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -19,9 +21,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   shapes,
   activePage,
 }) => {
+  const { language } = useCanvasStore();
+  const t = translations[language];
   const [filename, setFilename] = useState(`design-${Date.now()}`);
   const [format, setFormat] = useState<'png' | 'jpg' | 'txt' | 'rtf'>('png');
   const [isExporting, setIsExporting] = useState(false);
+
 
   if (!isOpen) return null;
 
@@ -181,7 +186,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Արտահանման սխալ տեղի ունեցավ:');
+      alert(language === 'hy' ? 'Արտահանման սխալ տեղի ունեցավ:' : language === 'ru' ? 'Произошла ошибка при экспорте.' : 'An error occurred during export.');
     } finally {
       setIsExporting(false);
     }
@@ -191,7 +196,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     <div className="login-modal-overlay">
       <div className="login-modal-content export-modal-content">
         <div className="login-modal-header">
-          <h2 className="login-modal-title">Պահպանել որպես</h2>
+          <h2 className="login-modal-title">{t.exportTitle}</h2>
           <button onClick={onClose} className="login-modal-close">
             <X size={18} />
           </button>
@@ -199,20 +204,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         <form onSubmit={handleExport} className="export-form">
           <div className="form-group mt-4">
-            <label className="cyber-label">Ֆայլի անուն</label>
+            <label className="cyber-label">{t.name}</label>
             <input
               type="text"
               className="cyber-input w-full"
               value={filename}
               onChange={(e) => setFilename(e.target.value)}
-              placeholder="Մուտքագրեք անունը..."
+              placeholder={t.placeholderText}
               required
               autoFocus
             />
           </div>
 
           <div className="form-group mt-4">
-            <label className="cyber-label">Ֆայլի ձևաչափ (Format)</label>
+            <label className="cyber-label">{t.exportFormat}</label>
             <div className="format-grid">
               <button
                 type="button"
@@ -256,7 +261,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             style={{ boxShadow: '0 4px 15px rgba(0, 242, 254, 0.3)', background: 'var(--cyan)' }}
           >
             <Download size={16} />
-            {isExporting ? 'Պահպանվում է...' : 'Պահպանել (Save As)'}
+            {isExporting 
+              ? (language === 'hy' ? 'Պահպանվում է...' : language === 'ru' ? 'Сохранение...' : 'Saving...') 
+              : t.exportBtn}
           </button>
         </form>
       </div>

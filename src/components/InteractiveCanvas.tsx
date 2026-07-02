@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer, RegularPolygon } from 'react-konva';
-import { Undo2, Redo2, Trash2, Download } from 'lucide-react';
+import { Undo2, Redo2, Trash2, Download, Plus } from 'lucide-react';
 import { useCanvasStore, type Shape } from '../store/canvasStore';
 import { ExportModal } from './ExportModal';
+import { translations } from '../store/translations';
 
 // Custom Image Component to handle image loading
 interface CanvasImageProps {
@@ -33,10 +34,20 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
     };
   }, [shapeProps.src]);
 
+  const cropProps = shapeProps.cropX !== undefined ? {
+    crop: {
+      x: shapeProps.cropX,
+      y: shapeProps.cropY || 0,
+      width: shapeProps.cropWidth || 100,
+      height: shapeProps.cropHeight || 100,
+    }
+  } : {};
+
   return image ? (
     <KonvaImage
       ref={shapeRef}
       image={image}
+      {...cropProps}
       id={shapeProps.id}
       x={shapeProps.x}
       y={shapeProps.y}
@@ -75,6 +86,7 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
   ) : null;
 };
 
+
 export const InteractiveCanvas: React.FC = () => {
   const { 
     shapes, 
@@ -90,12 +102,17 @@ export const InteractiveCanvas: React.FC = () => {
     clearCanvas,
     pages,
     activePageId,
-    sidebarOpen
+    sidebarOpen,
+    language,
+    addPage,
+    updatePageDimensions
   } = useCanvasStore();
   const stageRef = useRef<any>(null);
   const transformerRef = useRef<any>(null);
   
   const activePage = pages.find(p => p.id === activePageId) || pages[0]!;
+  const t = translations[language];
+
 
   // Pan and zoom states
   const [scale, setScale] = useState(1);
@@ -426,7 +443,7 @@ export const InteractiveCanvas: React.FC = () => {
           className="hud-button" 
           onClick={undo} 
           disabled={past.length === 0}
-          title="Հետարկել (Ctrl+Z)"
+          title={t.undo}
         >
           <Undo2 size={14} />
         </button>
@@ -434,7 +451,7 @@ export const InteractiveCanvas: React.FC = () => {
           className="hud-button" 
           onClick={redo} 
           disabled={future.length === 0}
-          title="Կրկնել (Ctrl+Y)"
+          title={t.redo}
         >
           <Redo2 size={14} />
         </button>
@@ -442,19 +459,27 @@ export const InteractiveCanvas: React.FC = () => {
         <button 
           className="hud-button danger" 
           onClick={clearCanvas} 
-          title="Մաքրել կտավը"
+          title={t.clearCanvas}
         >
           <Trash2 size={14} />
+        </button>
+        <button 
+          className="hud-button" 
+          onClick={() => addPage(794, 1123)} 
+          title={t.addPage}
+          style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
+        >
+          <Plus size={14} />
         </button>
         <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
         <button 
           className="hud-button" 
           onClick={() => setIsExportOpen(true)} 
-          title="Արտահանել կամ Պահպանել"
+          title={t.exportSave}
           style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
         >
           <Download size={14} style={{ marginRight: '6px' }} />
-          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>EXPORT / SAVE AS</span>
+          <span className="export-btn-text" style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold', letterSpacing: '0.5px' }}>{t.exportSave}</span>
         </button>
       </div>
 
@@ -466,7 +491,7 @@ export const InteractiveCanvas: React.FC = () => {
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          <span>Բաց թողեք պատկերը կտավի վրա</span>
+          <span>{t.dropImage}</span>
         </div>
       </div>
 
@@ -504,6 +529,7 @@ export const InteractiveCanvas: React.FC = () => {
       >
         <Layer>
           <Rect
+            id="page-rect"
             x={150}
             y={100}
             width={activePage.width}
@@ -514,7 +540,24 @@ export const InteractiveCanvas: React.FC = () => {
             shadowColor="rgba(0,0,0,0.15)"
             shadowBlur={20}
             shadowOpacity={0.4}
-            listening={false}
+            listening={true}
+            onClick={() => setSelectedId('page-rect')}
+            onTap={() => setSelectedId('page-rect')}
+            onTransformEnd={(e) => {
+              const node = e.target;
+              const scaleX = node.scaleX();
+              const scaleY = node.scaleY();
+              
+              node.scaleX(1);
+              node.scaleY(1);
+              node.x(150);
+              node.y(100);
+              
+              const newWidth = Math.max(100, Math.round(node.width() * scaleX));
+              const newHeight = Math.max(100, Math.round(node.height() * scaleY));
+              
+              updatePageDimensions(activePageId, newWidth, newHeight);
+            }}
           />
           {shapes.map((shape) => {
             const isSelected = shape.id === selectedId;
@@ -675,7 +718,7 @@ export const InteractiveCanvas: React.FC = () => {
                 <Text
                   key={shape.id}
                   {...commonProps}
-                  text={shape.text || 'Կրկնակի սեղմեք...'}
+                  text={shape.text || t.doubleClickText}
                   fontSize={shape.fontSize || 24}
                   fontFamily={shape.fontFamily || 'Inter'}
                   width={shape.width}
@@ -713,6 +756,19 @@ export const InteractiveCanvas: React.FC = () => {
               anchorSize={8}
               anchorCornerRadius={2}
               rotateAnchorOffset={25}
+              enabledAnchors={
+                selectedId === 'page-rect'
+                  ? undefined
+                  : shapes.find(s => s.id === selectedId)?.type === 'image'
+                    ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+                    : undefined
+              }
+              keepRatio={
+                selectedId === 'page-rect'
+                  ? false
+                  : shapes.find(s => s.id === selectedId)?.type === 'image'
+              }
+              rotateEnabled={selectedId !== 'page-rect'}
               boundBoxFunc={(oldBox, newBox) => {
                 if (newBox.width < 10 || newBox.height < 10) {
                   return oldBox;
