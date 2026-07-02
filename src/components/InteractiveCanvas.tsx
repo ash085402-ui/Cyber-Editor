@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer, RegularPolygon } from 'react-konva';
-import { Undo2, Redo2, Trash2, Download, Plus } from 'lucide-react';
+import { Stage, Layer, Rect, Circle, Star, Text, Image as KonvaImage, Transformer, RegularPolygon, Group } from 'react-konva';
+import { Undo2, Redo2, Trash2, Download, Plus, Copy } from 'lucide-react';
 import { useCanvasStore, type Shape } from '../store/canvasStore';
 import { ExportModal } from './ExportModal';
 import { translations } from '../store/translations';
@@ -12,9 +12,10 @@ interface CanvasImageProps {
   onSelect: () => void;
   onChange: (newProps: Partial<Shape>) => void;
   draggable: boolean;
+  dragBoundFunc?: (pos: any) => any;
 }
 
-const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSelected, onSelect, onChange, draggable }) => {
+const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSelected, onSelect, onChange, draggable, dragBoundFunc }) => {
   const shapeRef = useRef<any>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
@@ -61,6 +62,7 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
       onClick={onSelect}
       onTap={onSelect}
       draggable={draggable}
+      dragBoundFunc={dragBoundFunc}
       onDragEnd={(e) => {
         onChange({
           x: e.target.x(),
@@ -104,8 +106,7 @@ export const InteractiveCanvas: React.FC = () => {
     activePageId,
     sidebarOpen,
     language,
-    addPage,
-    updatePageDimensions
+    addPage
   } = useCanvasStore();
   const stageRef = useRef<any>(null);
   const transformerRef = useRef<any>(null);
@@ -116,15 +117,79 @@ export const InteractiveCanvas: React.FC = () => {
 
   // Pan and zoom states
   const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 150, y: 100 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isMiddleMouseDown, setIsMiddleMouseDown] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [hasCentered, setHasCentered] = useState(false);
 
-  // Dynamic Canvas dimensions to account for left sidebar (if open) and right panel (260px)
+  const selectedShape = shapes.find(s => s.id === selectedId);
+
+  const handleCopy = () => {
+    const selectedNodes = transformerRef.current?.nodes() || [];
+    if (selectedNodes.length > 0) {
+      selectedNodes.forEach((node: any) => {
+        const shapeId = node.id();
+        const shape = shapes.find(s => s.id === shapeId);
+        if (shape && !shape.locked) {
+          addShape({
+            ...shape,
+            x: shape.x + 25,
+            y: shape.y + 25,
+          });
+        }
+      });
+    } else if (selectedShape && !selectedShape.locked) {
+      addShape({
+        ...selectedShape,
+        x: selectedShape.x + 25,
+        y: selectedShape.y + 25,
+      });
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    const selectedNodes = transformerRef.current?.nodes() || [];
+    if (selectedNodes.length > 0) {
+      selectedNodes.forEach((node: any) => {
+        const shapeId = node.id();
+        const shape = shapes.find(s => s.id === shapeId);
+        if (shape && !shape.locked) {
+          deleteShape(shapeId);
+        }
+      });
+      setSelectedId(null);
+      transformerRef.current?.nodes([]);
+    } else if (selectedId) {
+      const selectedShape = shapes.find(s => s.id === selectedId);
+      if (selectedShape && !selectedShape.locked) {
+        deleteShape(selectedId);
+      }
+    }
+  };
+
+  const handleAddNew = () => {
+    addShape({
+      type: 'text',
+      x: 100,
+      y: 100,
+      width: 250,
+      height: 40,
+      fill: '#000000',
+      stroke: '',
+      strokeWidth: 0,
+      rotation: 0,
+      opacity: 1,
+      text: t.placeholderText,
+      fontSize: 16,
+      fontFamily: 'Inter',
+    });
+  };
+
+  // Dynamic Canvas dimensions to account for left sidebar (if open)
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth > 768 
-      ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260 
+      ? window.innerWidth - (sidebarOpen ? 280 : 0)
       : window.innerWidth,
     height: window.innerHeight
   });
@@ -133,7 +198,7 @@ export const InteractiveCanvas: React.FC = () => {
     const handleResize = () => {
       setCanvasSize({
         width: window.innerWidth > 768 
-          ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260 
+          ? window.innerWidth - (sidebarOpen ? 280 : 0)
           : window.innerWidth,
         height: window.innerHeight
       });
@@ -142,17 +207,40 @@ export const InteractiveCanvas: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [sidebarOpen]);
 
+  // Center page on load
+  useEffect(() => {
+    if (hasCentered) return;
+    
+    const padding = 40;
+    const targetWidth = activePage.width + padding * 2;
+    const targetHeight = activePage.height + padding * 2;
+    
+    const scaleX = canvasSize.width / targetWidth;
+    const scaleY = canvasSize.height / targetHeight;
+    const autoScale = Math.min(1.2, Math.min(scaleX, scaleY));
+    
+    setScale(autoScale);
+    
+    const xOffset = (canvasSize.width - activePage.width * autoScale) / 2;
+    const yOffset = (canvasSize.height - activePage.height * autoScale) / 2;
+    setPosition({ x: xOffset, y: yOffset });
+    
+    const stage = stageRef.current;
+    if (stage) {
+      stage.scale({ x: autoScale, y: autoScale });
+      stage.position({ x: xOffset, y: yOffset });
+      stage.batchDraw();
+    }
+    
+    if (canvasSize.width > 0 && canvasSize.height > 0) {
+      setHasCentered(true);
+    }
+  }, [canvasSize.width, canvasSize.height, activePage.width, activePage.height, hasCentered]);
+
   // Listen for reset canvas events from home navigation button click
   useEffect(() => {
     const handleReset = () => {
-      const stage = stageRef.current;
-      if (stage) {
-        stage.scale({ x: 1, y: 1 });
-        stage.position({ x: 0, y: 0 });
-        stage.batchDraw();
-        setScale(1);
-        setPosition({ x: 0, y: 0 });
-      }
+      setHasCentered(false);
     };
     window.addEventListener('reset-canvas', handleReset);
     return () => window.removeEventListener('reset-canvas', handleReset);
@@ -189,9 +277,41 @@ export const InteractiveCanvas: React.FC = () => {
           redo();
         }
         if (e.key === 'Delete' || e.key === 'Backspace') {
-          if (selectedId) {
+          const selectedNodes = transformerRef.current?.nodes() || [];
+          if (selectedNodes.length > 0) {
             e.preventDefault();
-            deleteShape(selectedId);
+            selectedNodes.forEach((node: any) => {
+              const shapeId = node.id();
+              const shape = shapes.find(s => s.id === shapeId);
+              if (shape && !shape.locked) {
+                deleteShape(shapeId);
+              }
+            });
+            setSelectedId(null);
+            transformerRef.current?.nodes([]);
+          } else if (selectedId) {
+            const selectedShape = shapes.find(s => s.id === selectedId);
+            if (selectedShape && !selectedShape.locked) {
+              e.preventDefault();
+              deleteShape(selectedId);
+            }
+          }
+        }
+        
+        // Select All Text Elements (Ctrl+A / Cmd+A)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+          const textShapes = shapes.filter(s => s.type === 'text' && !s.locked);
+          const stage = stageRef.current;
+          if (stage && textShapes.length > 0) {
+            e.preventDefault();
+            const nodesToSelect = textShapes
+              .map(s => stage.findOne(`#${s.id}`))
+              .filter(Boolean);
+            if (nodesToSelect.length > 0) {
+              setSelectedId(textShapes[0]!.id);
+              transformerRef.current?.nodes(nodesToSelect);
+              transformerRef.current?.getLayer().batchDraw();
+            }
           }
         }
         
@@ -411,7 +531,28 @@ export const InteractiveCanvas: React.FC = () => {
     }
   };
 
-  // Export functionality is now handled by the ExportModal component
+  const getDragBound = (nodeWidth: number, nodeHeight: number, xOffset = 0, yOffset = 0) => {
+    return (pos: any) => {
+      const groupNode = stageRef.current?.findOne('#a4-page-group');
+      if (!groupNode) return pos;
+
+      const groupAbsX = groupNode.absolutePosition().x;
+      const groupAbsY = groupNode.absolutePosition().y;
+      const scaleX = groupNode.getAbsoluteScale().x;
+      const scaleY = groupNode.getAbsoluteScale().y;
+
+      const relX = (pos.x - groupAbsX) / scaleX - xOffset;
+      const relY = (pos.y - groupAbsY) / scaleY - yOffset;
+
+      const clampedRelX = Math.max(0, Math.min(relX, activePage.width - nodeWidth));
+      const clampedRelY = Math.max(0, Math.min(relY, activePage.height - nodeHeight));
+
+      return {
+        x: (clampedRelX + xOffset) * scaleX + groupAbsX,
+        y: (clampedRelY + yOffset) * scaleY + groupAbsY
+      };
+    };
+  };
 
   // Dynamic CSS variables for grid background sync
   const gridStyle: React.CSSProperties = {
@@ -472,6 +613,41 @@ export const InteractiveCanvas: React.FC = () => {
           <Plus size={14} />
         </button>
         <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
+
+        {/* Copy Button */}
+        <button 
+          className="hud-button" 
+          onClick={handleCopy} 
+          disabled={!selectedId || !!selectedShape?.locked}
+          title={t.duplicate || "Copy"}
+        >
+          <Copy size={14} style={{ marginRight: '6px' }} />
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>{language === 'hy' ? 'ԿՐԿՆՕՐԻՆԱԿԵԼ' : language === 'ru' ? 'КОПИРОВАТЬ' : 'COPY'}</span>
+        </button>
+
+        {/* Delete Button */}
+        <button 
+          className="hud-button danger" 
+          onClick={handleDeleteSelected} 
+          disabled={!selectedId || !!selectedShape?.locked}
+          title={t.delete || "Delete"}
+        >
+          <Trash2 size={14} style={{ marginRight: '6px' }} />
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>{language === 'hy' ? 'ՋՆՋԵԼ' : language === 'ru' ? 'УДАЛИТЬ' : 'DELETE'}</span>
+        </button>
+
+        {/* Add New Button */}
+        <button 
+          className="hud-button" 
+          onClick={handleAddNew} 
+          title="Add New Text"
+          style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
+        >
+          <Plus size={14} style={{ marginRight: '6px' }} />
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-cyber)', fontWeight: 'bold' }}>{language === 'hy' ? 'ԱՎԵԼԱՑՆԵԼ' : language === 'ru' ? 'ДОБАВИТЬ' : 'ADD NEW'}</span>
+        </button>
+
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
         <button 
           className="hud-button" 
           onClick={() => setIsExportOpen(true)} 
@@ -528,224 +704,239 @@ export const InteractiveCanvas: React.FC = () => {
         onDragEnd={handleStageDrag}
       >
         <Layer>
-          <Rect
-            id="page-rect"
-            x={150}
-            y={100}
-            width={activePage.width}
-            height={activePage.height}
-            fill="#ffffff"
-            stroke="#e2e8f0"
-            strokeWidth={1}
-            shadowColor="rgba(0,0,0,0.15)"
-            shadowBlur={20}
-            shadowOpacity={0.4}
-            listening={true}
-            onClick={() => setSelectedId('page-rect')}
-            onTap={() => setSelectedId('page-rect')}
-            onTransformEnd={(e) => {
-              const node = e.target;
-              const scaleX = node.scaleX();
-              const scaleY = node.scaleY();
-              
-              node.scaleX(1);
-              node.scaleY(1);
-              node.x(150);
-              node.y(100);
-              
-              const newWidth = Math.max(100, Math.round(node.width() * scaleX));
-              const newHeight = Math.max(100, Math.round(node.height() * scaleY));
-              
-              updatePageDimensions(activePageId, newWidth, newHeight);
-            }}
-          />
-          {shapes.map((shape) => {
-            const isSelected = shape.id === selectedId;
-            const commonProps = {
-              id: shape.id,
-              x: shape.x,
-              y: shape.y,
-              rotation: shape.rotation,
-              opacity: shape.opacity,
-              fill: shape.fill,
-              stroke: shape.stroke,
-              strokeWidth: shape.strokeWidth,
-              shadowColor: shape.glowColor || shape.shadowColor,
-              shadowBlur: shape.glowBlur || shape.shadowBlur || 0,
-              shadowOpacity: shape.glowBlur ? 0.8 : 0,
-              draggable: !editingTextId,
-              onClick: () => setSelectedId(shape.id),
-              onTap: () => setSelectedId(shape.id),
-              onDragEnd: (e: any) => {
-                updateShape(shape.id, {
-                  x: e.target.x(),
-                  y: e.target.y(),
-                });
-              },
-              onTransformEnd: (e: any) => {
-                const node = e.target;
-                const scaleX = node.scaleX();
-                const scaleY = node.scaleY();
-                
-                // reset scale to 1 and update width/height instead for shapes stability
-                node.scaleX(1);
-                node.scaleY(1);
-                
-                updateShape(shape.id, {
-                  x: node.x(),
-                  y: node.y(),
-                  width: Math.max(5, node.width() * scaleX),
-                  height: Math.max(5, node.height() * scaleY),
-                  rotation: node.rotation(),
-                });
+          {/* Draggable/Movable A4 Page Group */}
+          <Group
+            id="a4-page-group"
+            x={position.x}
+            y={position.y}
+            draggable={!(isSpacePressed || isMiddleMouseDown)}
+            onDragEnd={(e) => {
+              if (e.target.id() === 'a4-page-group') {
+                setPosition({ x: e.target.x(), y: e.target.y() });
               }
-            };
+            }}
+          >
+            <Rect
+              id="page-rect"
+              x={0}
+              y={0}
+              width={activePage.width}
+              height={activePage.height}
+              fill="#ffffff"
+              stroke="#e2e8f0"
+              strokeWidth={1}
+              shadowColor="rgba(0,0,0,0.15)"
+              shadowBlur={20}
+              shadowOpacity={0.4}
+              listening={true}
+              onClick={() => setSelectedId(null)}
+              onTap={() => setSelectedId(null)}
+            />
 
-            if (shape.type === 'rect') {
-              return (
-                <Rect
-                  key={shape.id}
-                  {...commonProps}
-                  width={shape.width}
-                  height={shape.height}
-                />
-              );
-            }
-
-            if (shape.type === 'circle') {
-              return (
-                <Circle
-                  key={shape.id}
-                  {...commonProps}
-                  radius={shape.width / 2}
-                  // Shift x/y slightly since Konva Circle center is (x, y) but we define boundary coordinates
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.width / 2}
-                  onDragEnd={(e: any) => {
+            {/* Clipped Group for shapes boundary masking (overflow: hidden) */}
+            <Group
+              clipX={0}
+              clipY={0}
+              clipWidth={activePage.width}
+              clipHeight={activePage.height}
+            >
+              {shapes.map((shape) => {
+                const isSelected = shape.id === selectedId;
+                const commonProps = {
+                  id: shape.id,
+                  x: shape.x,
+                  y: shape.y,
+                  rotation: shape.rotation,
+                  opacity: shape.opacity,
+                  fill: shape.fill,
+                  stroke: shape.stroke,
+                  strokeWidth: shape.strokeWidth,
+                  shadowColor: shape.glowColor || shape.shadowColor,
+                  shadowBlur: shape.glowBlur || shape.shadowBlur || 0,
+                  shadowOpacity: shape.glowBlur ? 0.8 : 0,
+                  draggable: !editingTextId && !shape.locked,
+                  onClick: shape.locked ? undefined : () => setSelectedId(shape.id),
+                  onTap: shape.locked ? undefined : () => setSelectedId(shape.id),
+                  onDragEnd: (e: any) => {
                     updateShape(shape.id, {
-                      x: e.target.x() - shape.width / 2,
-                      y: e.target.y() - shape.width / 2,
+                      x: e.target.x(),
+                      y: e.target.y(),
                     });
-                  }}
-                  onTransformEnd={(e: any) => {
+                  },
+                  onTransformEnd: (e: any) => {
                     const node = e.target;
                     const scaleX = node.scaleX();
-                    const radius = node.radius() * scaleX;
+                    const scaleY = node.scaleY();
+                    
                     node.scaleX(1);
                     node.scaleY(1);
+                    
                     updateShape(shape.id, {
-                      x: node.x() - radius,
-                      y: node.y() - radius,
-                      width: radius * 2,
-                      height: radius * 2,
+                      x: node.x(),
+                      y: node.y(),
+                      width: Math.max(5, node.width() * scaleX),
+                      height: Math.max(5, node.height() * scaleY),
                       rotation: node.rotation(),
                     });
-                  }}
-                />
-              );
-            }
+                  }
+                };
 
-            if (shape.type === 'star') {
-              return (
-                <Star
-                  key={shape.id}
-                  {...commonProps}
-                  numPoints={5}
-                  innerRadius={shape.width / 2.5}
-                  outerRadius={shape.width / 2}
-                  // Shift star center coordinates
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.width / 2}
-                  onDragEnd={(e: any) => {
-                    updateShape(shape.id, {
-                      x: e.target.x() - shape.width / 2,
-                      y: e.target.y() - shape.width / 2,
-                    });
-                  }}
-                  onTransformEnd={(e: any) => {
-                    const node = e.target;
-                    const scaleX = node.scaleX();
-                    const outerRadius = node.outerRadius() * scaleX;
-                    node.scaleX(1);
-                    node.scaleY(1);
-                    updateShape(shape.id, {
-                      x: node.x() - outerRadius,
-                      y: node.y() - outerRadius,
-                      width: outerRadius * 2,
-                      height: outerRadius * 2,
-                      rotation: node.rotation(),
-                    });
-                  }}
-                />
-              );
-            }
+                if (shape.type === 'rect') {
+                  return (
+                    <Rect
+                      key={shape.id}
+                      {...commonProps}
+                      width={shape.width}
+                      height={shape.height}
+                      dragBoundFunc={getDragBound(shape.width, shape.height)}
+                    />
+                  );
+                }
 
-            if (shape.type === 'triangle') {
-              return (
-                <RegularPolygon
-                  key={shape.id}
-                  {...commonProps}
-                  sides={3}
-                  radius={shape.width / 2}
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.width / 2}
-                  onDragEnd={(e: any) => {
-                    updateShape(shape.id, {
-                      x: e.target.x() - shape.width / 2,
-                      y: e.target.y() - shape.width / 2,
-                    });
-                  }}
-                  onTransformEnd={(e: any) => {
-                    const node = e.target;
-                    const scaleX = node.scaleX();
-                    const radius = node.radius() * scaleX;
-                    node.scaleX(1);
-                    node.scaleY(1);
-                    updateShape(shape.id, {
-                      x: node.x() - radius,
-                      y: node.y() - radius,
-                      width: radius * 2,
-                      height: radius * 2,
-                      rotation: node.rotation(),
-                    });
-                  }}
-                />
-              );
-            }
+                if (shape.type === 'circle') {
+                  const radius = shape.width / 2;
+                  return (
+                    <Circle
+                      key={shape.id}
+                      {...commonProps}
+                      radius={radius}
+                      x={shape.x + radius}
+                      y={shape.y + radius}
+                      dragBoundFunc={getDragBound(shape.width, shape.width, radius, radius)}
+                      onDragEnd={(e: any) => {
+                        updateShape(shape.id, {
+                          x: e.target.x() - radius,
+                          y: e.target.y() - radius,
+                        });
+                      }}
+                      onTransformEnd={(e: any) => {
+                        const node = e.target;
+                        const scaleX = node.scaleX();
+                        const r = node.radius() * scaleX;
+                        node.scaleX(1);
+                        node.scaleY(1);
+                        updateShape(shape.id, {
+                          x: node.x() - r,
+                          y: node.y() - r,
+                          width: r * 2,
+                          height: r * 2,
+                          rotation: node.rotation(),
+                        });
+                      }}
+                    />
+                  );
+                }
 
-            if (shape.type === 'text') {
-              return (
-                <Text
-                  key={shape.id}
-                  {...commonProps}
-                  text={shape.text || t.doubleClickText}
-                  fontSize={shape.fontSize || 24}
-                  fontFamily={shape.fontFamily || 'Inter'}
-                  width={shape.width}
-                  align="center"
-                  onDblClick={(e) => handleTextDblClick(e, shape)}
-                  onDblTap={(e) => handleTextDblClick(e, shape)}
-                />
-              );
-            }
+                if (shape.type === 'star') {
+                  const radius = shape.width / 2;
+                  return (
+                    <Star
+                      key={shape.id}
+                      {...commonProps}
+                      numPoints={5}
+                      innerRadius={shape.width / 2.5}
+                      outerRadius={radius}
+                      x={shape.x + radius}
+                      y={shape.y + radius}
+                      dragBoundFunc={getDragBound(shape.width, shape.width, radius, radius)}
+                      onDragEnd={(e: any) => {
+                        updateShape(shape.id, {
+                          x: e.target.x() - radius,
+                          y: e.target.y() - radius,
+                        });
+                      }}
+                      onTransformEnd={(e: any) => {
+                        const node = e.target;
+                        const scaleX = node.scaleX();
+                        const outerRadius = node.outerRadius() * scaleX;
+                        node.scaleX(1);
+                        node.scaleY(1);
+                        updateShape(shape.id, {
+                          x: node.x() - outerRadius,
+                          y: node.y() - outerRadius,
+                          width: outerRadius * 2,
+                          height: outerRadius * 2,
+                          rotation: node.rotation(),
+                        });
+                      }}
+                    />
+                  );
+                }
 
-            if (shape.type === 'image') {
-              return (
-                <CanvasImage
-                  key={shape.id}
-                  shapeProps={shape}
-                  isSelected={isSelected}
-                  onSelect={() => setSelectedId(shape.id)}
-                  onChange={(newProps) => updateShape(shape.id, newProps)}
-                  draggable={!editingTextId}
-                />
-              );
-            }
+                if (shape.type === 'triangle') {
+                  const radius = shape.width / 2;
+                  return (
+                    <RegularPolygon
+                      key={shape.id}
+                      {...commonProps}
+                      sides={3}
+                      radius={radius}
+                      x={shape.x + radius}
+                      y={shape.y + radius}
+                      dragBoundFunc={getDragBound(shape.width, shape.width, radius, radius)}
+                      onDragEnd={(e: any) => {
+                        updateShape(shape.id, {
+                          x: e.target.x() - radius,
+                          y: e.target.y() - radius,
+                        });
+                      }}
+                      onTransformEnd={(e: any) => {
+                        const node = e.target;
+                        const scaleX = node.scaleX();
+                        const r = node.radius() * scaleX;
+                        node.scaleX(1);
+                        node.scaleY(1);
+                        updateShape(shape.id, {
+                          x: node.x() - r,
+                          y: node.y() - r,
+                          width: r * 2,
+                          height: r * 2,
+                          rotation: node.rotation(),
+                        });
+                      }}
+                    />
+                  );
+                }
 
-            return null;
-          })}
+                if (shape.type === 'text') {
+                  const textHeight = shape.height || (shape.fontSize || 24) * 2;
+                  return (
+                    <Text
+                      key={shape.id}
+                      {...commonProps}
+                      name="text-shape"
+                      text={shape.text || t.doubleClickText}
+                      fontSize={shape.fontSize || 24}
+                      fontFamily={shape.fontFamily || 'Inter'}
+                      width={shape.width}
+                      align="justify"
+                      dragBoundFunc={getDragBound(shape.width, textHeight)}
+                      onDblClick={shape.locked ? undefined : (e) => handleTextDblClick(e, shape)}
+                      onDblTap={shape.locked ? undefined : (e) => handleTextDblClick(e, shape)}
+                    />
+                  );
+                }
 
-          {/* Cyberpunk Custom Transformer */}
+                if (shape.type === 'image') {
+                  return (
+                    <CanvasImage
+                      key={shape.id}
+                      shapeProps={shape}
+                      isSelected={isSelected}
+                      onSelect={() => setSelectedId(shape.id)}
+                      onChange={(newProps) => updateShape(shape.id, newProps)}
+                      draggable={!editingTextId && !shape.locked}
+                      dragBoundFunc={getDragBound(shape.width, shape.height)}
+                    />
+                  );
+                }
+
+                return null;
+              })}
+            </Group>
+          </Group>
+
+          {/* Cyberpunk Custom Transformer (rendered outside the clipped group so handles remain fully visible) */}
           {selectedId && !editingTextId && (
             <Transformer
               ref={transformerRef}
@@ -757,20 +948,24 @@ export const InteractiveCanvas: React.FC = () => {
               anchorCornerRadius={2}
               rotateAnchorOffset={25}
               enabledAnchors={
-                selectedId === 'page-rect'
-                  ? undefined
-                  : shapes.find(s => s.id === selectedId)?.type === 'image'
-                    ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
-                    : undefined
+                shapes.find(s => s.id === selectedId)?.type === 'image'
+                  ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+                  : undefined
               }
               keepRatio={
-                selectedId === 'page-rect'
-                  ? false
-                  : shapes.find(s => s.id === selectedId)?.type === 'image'
+                shapes.find(s => s.id === selectedId)?.type === 'image'
               }
-              rotateEnabled={selectedId !== 'page-rect'}
+              rotateEnabled={true}
               boundBoxFunc={(oldBox, newBox) => {
                 if (newBox.width < 10 || newBox.height < 10) {
+                  return oldBox;
+                }
+                const isOutside = 
+                  newBox.x < 0 || 
+                  newBox.y < 0 || 
+                  (newBox.x + newBox.width) > activePage.width || 
+                  (newBox.y + newBox.height) > activePage.height;
+                if (isOutside) {
                   return oldBox;
                 }
                 return newBox;

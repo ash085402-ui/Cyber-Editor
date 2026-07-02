@@ -5,11 +5,7 @@ import {
   X,
   Image as ImageIcon,
   Save,
-  FolderOpen,
-  Type,
-  Square,
-  Triangle,
-  Star
+  FolderOpen
 } from 'lucide-react';
 
 import { useGoogleLogin } from '@react-oauth/google';
@@ -35,6 +31,7 @@ export const Sidebar: React.FC = () => {
     sidebarOpen,
     toggleSidebar,
     language,
+    setLanguage,
     pages,
     activePageId,
     loadTemplate
@@ -46,80 +43,11 @@ export const Sidebar: React.FC = () => {
 
   const t = translations[language];
 
-  const activePage = pages.find((p) => p.id === activePageId) || pages[0]!;
-  const centerX = 150 + activePage.width / 2;
-  const centerY = 100 + activePage.height / 2;
 
-  const handleAddRect = () => {
-    addShape({
-      type: 'rect',
-      x: centerX - 60 + (Math.random() * 40 - 20),
-      y: centerY - 60 + (Math.random() * 40 - 20),
-      width: 120,
-      height: 120,
-      fill: '#00f2fe',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#00f2fe',
-      glowBlur: 0
-    });
-  };
 
-  const handleAddTriangle = () => {
-    addShape({
-      type: 'triangle',
-      x: centerX - 60 + (Math.random() * 40 - 20),
-      y: centerY - 60 + (Math.random() * 40 - 20),
-      width: 120,
-      height: 120,
-      fill: '#00ff66',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#00ff66',
-      glowBlur: 0
-    });
-  };
 
-  const handleAddStar = () => {
-    addShape({
-      type: 'star',
-      x: centerX - 60 + (Math.random() * 40 - 20),
-      y: centerY - 60 + (Math.random() * 40 - 20),
-      width: 120,
-      height: 120,
-      fill: '#ff007f',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#ff007f',
-      glowBlur: 0
-    });
-  };
 
-  const handleAddText = () => {
-    addShape({
-      type: 'text',
-      x: centerX - 125,
-      y: centerY - 20,
-      width: 250,
-      height: 40,
-      fill: '#000000',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 1,
-      text: t.placeholderText,
-      fontSize: 24,
-      fontFamily: 'Inter',
-      glowColor: '',
-      glowBlur: 0
-    });
-  };
+
   
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('isLoggedIn') === 'true';
@@ -333,6 +261,8 @@ export const Sidebar: React.FC = () => {
     }
   };
 
+
+
   return (
     <>
       <button
@@ -375,34 +305,6 @@ export const Sidebar: React.FC = () => {
 
         <button
           className="hud-button w-full"
-          onClick={handleAddText}
-        >
-          <Type size={16} style={{ marginRight: '8px' }} /> {t.text}
-        </button>
-
-        <button
-          className="hud-button w-full"
-          onClick={handleAddRect}
-        >
-          <Square size={16} style={{ marginRight: '8px' }} /> {t.rect}
-        </button>
-
-        <button
-          className="hud-button w-full"
-          onClick={handleAddTriangle}
-        >
-          <Triangle size={16} style={{ marginRight: '8px' }} /> {t.triangle}
-        </button>
-
-        <button
-          className="hud-button w-full"
-          onClick={handleAddStar}
-        >
-          <Star size={16} style={{ marginRight: '8px' }} /> {t.star}
-        </button>
-
-        <button
-          className="hud-button w-full"
           onClick={() => imageInputRef.current?.click()}
         >
           <ImageIcon size={16} style={{ marginRight: '8px' }} /> {t.openImage}
@@ -432,6 +334,28 @@ export const Sidebar: React.FC = () => {
           <button className="hud-button w-full" onClick={triggerProjectFileInput}>
             <FolderOpen size={15} style={{ marginRight: '8px' }} /> {t.openProject}
           </button>
+
+          {/* Relocated Language Switcher */}
+          <div className="language-selector-sidebar" style={{ display: 'flex', gap: '8px', marginTop: '10px', justifyContent: 'center' }}>
+            <button
+              className={`lang-btn ${language === 'en' ? 'active' : ''}`}
+              onClick={() => setLanguage('en')}
+            >
+              EN
+            </button>
+            <button
+              className={`lang-btn ${language === 'ru' ? 'active' : ''}`}
+              onClick={() => setLanguage('ru')}
+            >
+              RU
+            </button>
+            <button
+              className={`lang-btn ${language === 'hy' ? 'active' : ''}`}
+              onClick={() => setLanguage('hy')}
+            >
+              HY
+            </button>
+          </div>
         </div>
       </div>
 

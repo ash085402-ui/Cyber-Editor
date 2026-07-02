@@ -45,6 +45,7 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  touch-action: manipulation;
 }
 
 #root {
@@ -52,6 +53,7 @@ body {
   height: 100vh;
   position: relative;
   overflow: hidden;
+  touch-action: manipulation;
 }
 
 /* Scrollbars */

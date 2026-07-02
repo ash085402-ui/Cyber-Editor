@@ -1,12 +1,55 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Square, Circle as CircleIcon, Star, Type, Image as ImageIcon, Undo2, Redo2, Trash2 } from 'lucide-react';
+import { Type, Image as ImageIcon, Undo2, Redo2, Trash2 } from 'lucide-react';
 import { useCanvasStore } from '../store/canvasStore';
+import { translations } from '../store/translations';
+
+const getRadialLabels = (lang: 'hy' | 'en' | 'ru') => {
+  if (lang === 'hy') {
+    return {
+      undo: 'Ետ',
+      redo: 'Առաջ',
+      delete: 'Ջնջել',
+      text: 'Տեքստ',
+      image: 'Ընտրել նկար'
+    };
+  }
+  if (lang === 'ru') {
+    return {
+      undo: 'Назад',
+      redo: 'Вперед',
+      delete: 'Удалить',
+      text: 'Текст',
+      image: 'Выбрать картинку'
+    };
+  }
+  return {
+    undo: 'Undo',
+    redo: 'Redo',
+    delete: 'Delete',
+    text: 'Text',
+    image: 'Select Image'
+  };
+};
 
 export const RadialMenu: React.FC = () => {
-  const { addShape, undo, redo, clearCanvas, past, future, pages, activePageId } = useCanvasStore();
+  const { 
+    addShape, 
+    undo, 
+    redo, 
+    past, 
+    future, 
+    pages, 
+    activePageId, 
+    language,
+    deleteShape,
+    selectedId
+  } = useCanvasStore();
+
   const activePage = pages.find(p => p.id === activePageId) || pages[0]!;
   const centerX = 150 + activePage.width / 2;
   const centerY = 100 + activePage.height / 2;
+  const t = translations[language];
+
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
@@ -66,60 +109,6 @@ export const RadialMenu: React.FC = () => {
     };
   }, []);
 
-  const handleAddRect = () => {
-    addShape({
-      type: 'rect',
-      x: centerX - 60 + (Math.random() * 60 - 30),
-      y: centerY - 60 + (Math.random() * 60 - 30),
-      width: 120,
-      height: 120,
-      fill: '#00f2fe',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#00f2fe',
-      glowBlur: 0,
-    });
-    closeMenu();
-  };
-
-  const handleAddCircle = () => {
-    addShape({
-      type: 'circle',
-      x: centerX - 60 + (Math.random() * 60 - 30),
-      y: centerY - 60 + (Math.random() * 60 - 30),
-      width: 120,
-      height: 120,
-      fill: '#ff007f',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#ff007f',
-      glowBlur: 0,
-    });
-    closeMenu();
-  };
-
-  const handleAddStar = () => {
-    addShape({
-      type: 'star',
-      x: centerX - 60 + (Math.random() * 60 - 30),
-      y: centerY - 60 + (Math.random() * 60 - 30),
-      width: 120,
-      height: 120,
-      fill: '#7928ca',
-      stroke: '',
-      strokeWidth: 0,
-      rotation: 0,
-      opacity: 0.85,
-      glowColor: '#7928ca',
-      glowBlur: 0,
-    });
-    closeMenu();
-  };
-
   const handleAddText = () => {
     addShape({
       type: 'text',
@@ -127,15 +116,15 @@ export const RadialMenu: React.FC = () => {
       y: centerY - 20,
       width: 250,
       height: 40,
-      fill: '#ffffff',
+      fill: '#000000',
       stroke: '',
       strokeWidth: 0,
       rotation: 0,
       opacity: 1,
-      text: 'Մուտքագրեք տեքստ...',
+      text: t.placeholderText,
       fontSize: 24,
-      fontFamily: 'Orbitron',
-      glowColor: '#ffffff',
+      fontFamily: 'Inter',
+      glowColor: '',
       glowBlur: 0,
     });
     closeMenu();
@@ -152,36 +141,73 @@ export const RadialMenu: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          addShape({
-            type: 'image',
-            x: centerX - 125,
-            y: centerY - 125,
-            width: 250,
-            height: 250,
-            fill: '',
-            stroke: '',
-            strokeWidth: 0,
-            rotation: 0,
-            opacity: 1,
-            src: event.target.result as string,
-            glowColor: '#00f2fe',
-            glowBlur: 0,
-          });
+          const img = new Image();
+          img.src = event.target.result as string;
+          img.onload = () => {
+            const maxDim = 250;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w > h) {
+              h = (h / w) * maxDim;
+              w = maxDim;
+            } else {
+              w = (w / h) * maxDim;
+              h = maxDim;
+            }
+
+            addShape({
+              type: 'image',
+              x: centerX - w / 2,
+              y: centerY - h / 2,
+              width: w,
+              height: h,
+              fill: '',
+              stroke: '',
+              strokeWidth: 0,
+              rotation: 0,
+              opacity: 1,
+              src: img.src,
+              glowColor: '#00f2fe',
+              glowBlur: 0,
+            });
+          };
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const labels = getRadialLabels(language);
+
   const items = [
-    { icon: <Square size={18} />, label: 'Rect', action: handleAddRect },
-    { icon: <CircleIcon size={18} />, label: 'Circle', action: handleAddCircle },
-    { icon: <Star size={18} />, label: 'Star', action: handleAddStar },
-    { icon: <Type size={18} />, label: 'Text', action: handleAddText },
-    { icon: <ImageIcon size={18} />, label: 'Image', action: triggerFileInput },
-    { icon: <Undo2 size={18} />, label: 'Undo', action: () => { undo(); closeMenu(); }, disabled: past.length === 0 },
-    { icon: <Redo2 size={18} />, label: 'Redo', action: () => { redo(); closeMenu(); }, disabled: future.length === 0 },
-    { icon: <Trash2 size={18} />, label: 'Clear', action: () => { clearCanvas(); closeMenu(); } },
+    { 
+      icon: <Undo2 size={18} />, 
+      label: labels.undo, 
+      action: () => { undo(); closeMenu(); }, 
+      disabled: past.length === 0 
+    },
+    { 
+      icon: <Redo2 size={18} />, 
+      label: labels.redo, 
+      action: () => { redo(); closeMenu(); }, 
+      disabled: future.length === 0 
+    },
+    { 
+      icon: <Trash2 size={18} />, 
+      label: labels.delete, 
+      action: () => { if (selectedId) deleteShape(selectedId); closeMenu(); }, 
+      disabled: !selectedId 
+    },
+    { 
+      icon: <Type size={18} />, 
+      label: labels.text, 
+      action: handleAddText 
+    },
+    { 
+      icon: <ImageIcon size={18} />, 
+      label: labels.image, 
+      action: triggerFileInput 
+    },
   ];
 
   const radius = 75;
