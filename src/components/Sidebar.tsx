@@ -104,7 +104,7 @@ export const Sidebar: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(loggedUser));
         setShowLoginModal(false);
         showToast('Google մուտքը հաջողվեց');
-      } catch (err) {
+      } catch {
         showToast('Google մուտքի սխալ');
       } finally {
         setIsLoggingIn(false);
@@ -253,7 +253,7 @@ export const Sidebar: React.FC = () => {
           } else {
             showToast(t.toastError);
           }
-        } catch (err) {
+        } catch {
           showToast(t.toastReadError);
         }
       };

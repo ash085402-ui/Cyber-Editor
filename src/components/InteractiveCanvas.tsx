@@ -16,7 +16,7 @@ interface CanvasImageProps {
 }
 
 const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSelected, onSelect, onChange, draggable, dragBoundFunc }) => {
-  const shapeRef = useRef<any>(null);
+  const groupRef = useRef<any>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
@@ -35,9 +35,33 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
     };
   }, [shapeProps.src]);
 
-  const cropProps = shapeProps.cropX !== undefined ? {
+  const hasCrop = shapeProps.cropX !== undefined;
+  
+  let drawWidth = shapeProps.width;
+  let drawHeight = shapeProps.height;
+  let localX = 0;
+  let localY = 0;
+
+  if (image && !hasCrop) {
+    const imageRatio = image.naturalWidth / image.naturalHeight;
+    const containerRatio = shapeProps.width / shapeProps.height;
+
+    if (imageRatio > containerRatio) {
+      drawWidth = shapeProps.width;
+      drawHeight = shapeProps.width / imageRatio;
+      localX = 0;
+      localY = (shapeProps.height - drawHeight) / 2;
+    } else {
+      drawWidth = shapeProps.height * imageRatio;
+      drawHeight = shapeProps.height;
+      localX = (shapeProps.width - drawWidth) / 2;
+      localY = 0;
+    }
+  }
+
+  const cropProps = hasCrop ? {
     crop: {
-      x: shapeProps.cropX,
+      x: shapeProps.cropX!,
       y: shapeProps.cropY || 0,
       width: shapeProps.cropWidth || 100,
       height: shapeProps.cropHeight || 100,
@@ -45,32 +69,28 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
   } : {};
 
   return image ? (
-    <KonvaImage
-      ref={shapeRef}
-      image={image}
-      {...cropProps}
+    <Group
+      ref={groupRef}
       id={shapeProps.id}
       x={shapeProps.x}
       y={shapeProps.y}
       width={shapeProps.width}
       height={shapeProps.height}
       rotation={shapeProps.rotation}
-      opacity={shapeProps.opacity}
-      shadowColor={shapeProps.glowColor || shapeProps.shadowColor}
-      shadowBlur={shapeProps.glowBlur || shapeProps.shadowBlur || 0}
-      shadowOpacity={shapeProps.glowBlur ? 0.8 : 0}
-      onClick={onSelect}
-      onTap={onSelect}
       draggable={draggable}
       dragBoundFunc={dragBoundFunc}
+      onClick={onSelect}
+      onTap={onSelect}
       onDragEnd={(e) => {
-        onChange({
-          x: e.target.x(),
-          y: e.target.y(),
-        });
+        if (e.target === groupRef.current) {
+          onChange({
+            x: e.target.x(),
+            y: e.target.y(),
+          });
+        }
       }}
-      onTransformEnd={() => {
-        const node = shapeRef.current;
+      onTransformEnd={(e) => {
+        const node = e.target;
         if (!node) return;
         const scaleX = node.scaleX();
         const scaleY = node.scaleY();
@@ -84,7 +104,20 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
           rotation: node.rotation(),
         });
       }}
-    />
+    >
+      <KonvaImage
+        image={image}
+        {...cropProps}
+        x={localX}
+        y={localY}
+        width={drawWidth}
+        height={drawHeight}
+        opacity={shapeProps.opacity}
+        shadowColor={shapeProps.glowColor || shapeProps.shadowColor}
+        shadowBlur={shapeProps.glowBlur || shapeProps.shadowBlur || 0}
+        shadowOpacity={shapeProps.glowBlur ? 0.8 : 0}
+      />
+    </Group>
   ) : null;
 };
 
@@ -186,10 +219,10 @@ export const InteractiveCanvas: React.FC = () => {
     });
   };
 
-  // Dynamic Canvas dimensions to account for left sidebar (if open)
+  // Dynamic Canvas dimensions to account for left sidebar and right panel (if open on desktop)
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth > 768 
-      ? window.innerWidth - (sidebarOpen ? 280 : 0)
+      ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260
       : window.innerWidth,
     height: window.innerHeight
   });
@@ -198,7 +231,7 @@ export const InteractiveCanvas: React.FC = () => {
     const handleResize = () => {
       setCanvasSize({
         width: window.innerWidth > 768 
-          ? window.innerWidth - (sidebarOpen ? 280 : 0)
+          ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260
           : window.innerWidth,
         height: window.innerHeight
       });
@@ -371,7 +404,7 @@ export const InteractiveCanvas: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedId, shapes, copiedShape, undo, redo, deleteShape, addShape, updateShape]);
+  }, [selectedId, shapes, copiedShape, undo, redo, deleteShape, addShape, updateShape, setSelectedId]);
 
   // Connect Transformer to Selected Node
   useEffect(() => {

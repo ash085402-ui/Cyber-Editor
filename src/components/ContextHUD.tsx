@@ -28,7 +28,13 @@ export const ContextHUD: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          updateShape(selectedShape.id, { src: event.target.result as string });
+          updateShape(selectedShape.id, { 
+            src: event.target.result as string,
+            cropX: undefined,
+            cropY: undefined,
+            cropWidth: undefined,
+            cropHeight: undefined
+          });
         }
       };
       reader.readAsDataURL(file);
