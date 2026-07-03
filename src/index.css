@@ -1186,12 +1186,12 @@ body {
 
 /* Canvas Container Dynamic Offsets */
 .canvas-container {
-  width: calc(100% - 280px - 260px);
+  width: calc(100% - 280px);
   left: 280px;
 }
 
 .canvas-container.sidebar-closed {
-  width: calc(100% - 260px);
+  width: 100%;
   left: 0;
 }
 
@@ -1446,6 +1446,25 @@ body {
     z-index: 2100 !important;
   }
   
+  .top-open-image-button {
+    position: fixed;
+    left: 260px;
+    top: 20px;
+    z-index: 2200;
+    background: rgba(0, 242, 254, 0.12);
+    color: #e5f9ff;
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-family: var(--font-cyber);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .top-open-image-button:hover {
+    background: rgba(0, 242, 254, 0.18);
+  }
+
   /* Make sidebar full screen overlay on mobile */
   .nav-sidebar {
     width: 100vw !important;

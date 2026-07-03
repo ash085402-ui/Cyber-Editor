@@ -159,9 +159,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
           const extension = format === 'png' ? '.png' : '.jpg';
 
+          const pageGroup = stage.findOne('#a4-page-group');
+          const exportX = pageGroup ? pageGroup.x() : 150;
+          const exportY = pageGroup ? pageGroup.y() : 100;
+
           const dataURL = stage.toDataURL({
-            x: 150,
-            y: 100,
+            x: exportX,
+            y: exportY,
             width: activePage.width,
             height: activePage.height,
             pixelRatio: 2,

@@ -24,6 +24,8 @@ export interface Shape {
   cropY?: number;
   cropWidth?: number;
   cropHeight?: number;
+  padding?: number;
+  lineHeight?: number;
   locked?: boolean;
 }
 
@@ -92,13 +94,17 @@ const saveStateToLocalStorage = (pages: Page[], activePageId: string) => {
 };
 
 export const getNewspaperShapes = (): Shape[] => {
-  const baseImg = '/5344053332416339591.jpg';
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const nkar1 = `${baseUrl}Nkar1.jpg`;
+  const nkar2 = `${baseUrl}Nkar2.jpg`;
+  const nkar3 = `${baseUrl}Nkar3.jpg`;
+
   return [
     // Images (cropped parts of the flyer)
     {
       id: 'img_main',
       type: 'image',
-      src: baseImg,
+      src: nkar1,
       x: 20,
       y: 120,
       width: 491,
@@ -118,11 +124,12 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'img_church',
       type: 'image',
-      src: baseImg,
-      x: 546,
-      y: 575,
+      src: nkar2,
+      // place below the Kumayri historical district text section
+      x: 520,
+      y: 600,
       width: 228,
-      height: 165,
+      height: 140,
       fill: '',
       stroke: '',
       strokeWidth: 0,
@@ -130,19 +137,21 @@ export const getNewspaperShapes = (): Shape[] => {
       opacity: 1,
       glowColor: '#00f2fe',
       glowBlur: 0,
-      cropX: 490,
-      cropY: 500,
-      cropWidth: 210,
-      cropHeight: 130
+      cropX: 0,
+      cropY: 0,
+      cropWidth: 228,
+      cropHeight: 140,
+      locked: true
     },
     {
       id: 'img_street',
       type: 'image',
-      src: baseImg,
+      src: nkar3,
+      // place under the Vardanants square header
       x: 20,
-      y: 755,
+      y: 730,
       width: 228,
-      height: 240,
+      height: 140,
       fill: '',
       stroke: '',
       strokeWidth: 0,
@@ -150,17 +159,18 @@ export const getNewspaperShapes = (): Shape[] => {
       opacity: 1,
       glowColor: '#00f2fe',
       glowBlur: 0,
-      cropX: 15,
-      cropY: 875,
-      cropWidth: 210,
-      cropHeight: 110
+      cropX: 0,
+      cropY: 0,
+      cropWidth: 228,
+      cropHeight: 140,
+      locked: true
     },
 
     // Background rectangles for the headers (gray boxes)
     {
       id: 'bg_header_kumayri',
       type: 'rect',
-      x: 546,
+      x: 520,
       y: 120,
       width: 228,
       height: 30,
@@ -224,7 +234,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'bg_header_aslamazyan',
       type: 'rect',
-      x: 546,
+      x: 520,
       y: 755,
       width: 228,
       height: 30,
@@ -242,7 +252,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_title',
       type: 'text',
-      x: 20,
+      x: 80,
       y: 20,
       width: 491,
       height: 40,
@@ -261,7 +271,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_subtitle',
       type: 'text',
-      x: 20,
+      x: 60,
       y: 70,
       width: 491,
       height: 25,
@@ -280,7 +290,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_header_right',
       type: 'text',
-      x: 546,
+      x: 520,
       y: 10,
       width: 228,
       height: 60,
@@ -301,7 +311,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_header_kumayri',
       type: 'text',
-      x: 546,
+      x: 520,
       y: 125,
       width: 228,
       height: 25,
@@ -320,7 +330,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_body_kumayri',
       type: 'text',
-      x: 546,
+      x: 520,
       y: 160,
       width: 228,
       height: 400,
@@ -332,6 +342,8 @@ export const getNewspaperShapes = (): Shape[] => {
       text: "Կումայրիի պատմական թաղամասը համարվում է Գյումրիի իրական ոսկեզօծիկը։ Այն յուրատեսակ բացօթյա թանգարան է, որտեղ մինչև այսօր պահպանվել են ավելի քան հազար պատմական շինություններ՝ կառուցված հիմնականում 18-19-րդ դարերում։ Թաղամասի յուրաքանչյուր փողոց շնչում է հին Ալեքսանդրապոլի պատմությամբ։ Այս տարածքում կարելի է տեսնել տարբեր ճարտարապետական գլուխգործոցներ, շքեղ առանձնատներ, հասարակական կառույցներ և եկեղեցիներ, որոնք կառուցված են կարմիր ու սև տուֆի համադրությամբ։ Այս նյութերն ու ոճային առանձնահատկությունները Գյումրիին տալիս են անզուգական գեղարվեստական տեսք։",
       fontSize: 13,
       fontFamily: 'Inter',
+      padding: 12,
+      lineHeight: 1.5,
       glowColor: '',
       glowBlur: 0,
       locked: true
@@ -339,7 +351,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_welcome_title',
       type: 'text',
-      x: 20,
+      x: 40,
       y: 495,
       width: 491,
       height: 50,
@@ -472,7 +484,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_header_aslamazyan',
       type: 'text',
-      x: 546,
+      x: 520,
       y: 760,
       width: 228,
       height: 25,
@@ -541,7 +553,7 @@ const getInitialState = () => {
     id: defaultPageId,
     name: 'Էջ 1',
     width: 794,
-    height: 1123,
+    height: 1044,
     shapes: getNewspaperShapes(),
     past: [],
     future: [],
@@ -593,7 +605,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
 
 
     // Pages management
-    addPage: (width = 794, height = 1123) => {
+    addPage: (width = 794, height = 1044) => {
       const { pages } = get();
       const newPageId = `page_${Date.now()}`;
       const newPage: Page = {

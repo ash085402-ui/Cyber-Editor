@@ -9,7 +9,7 @@ import { translations } from '../store/translations';
 interface CanvasImageProps {
   shapeProps: Shape;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect?: () => void;
   onChange: (newProps: Partial<Shape>) => void;
   draggable: boolean;
   dragBoundFunc?: (pos: any) => any;
@@ -25,10 +25,10 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
       const img = new window.Image();
       img.src = shapeProps.src;
       img.onload = () => {
-        if (active) {
-          setImage(img);
-        }
+        if (active) setImage(img);
       };
+    } else {
+      setImage(null);
     }
     return () => {
       active = false;
@@ -36,7 +36,6 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
   }, [shapeProps.src]);
 
   const hasCrop = shapeProps.cropX !== undefined;
-  
   let drawWidth = shapeProps.width;
   let drawHeight = shapeProps.height;
   let localX = 0;
@@ -59,14 +58,16 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
     }
   }
 
-  const cropProps = hasCrop ? {
-    crop: {
-      x: shapeProps.cropX!,
-      y: shapeProps.cropY || 0,
-      width: shapeProps.cropWidth || 100,
-      height: shapeProps.cropHeight || 100,
-    }
-  } : {};
+  const cropProps = hasCrop
+    ? {
+        crop: {
+          x: shapeProps.cropX!,
+          y: shapeProps.cropY || 0,
+          width: shapeProps.cropWidth || 100,
+          height: shapeProps.cropHeight || 100,
+        },
+      }
+    : {};
 
   return image ? (
     <Group
@@ -83,10 +84,7 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
       onTap={onSelect}
       onDragEnd={(e) => {
         if (e.target === groupRef.current) {
-          onChange({
-            x: e.target.x(),
-            y: e.target.y(),
-          });
+          onChange({ x: e.target.x(), y: e.target.y() });
         }
       }}
       onTransformEnd={(e) => {
@@ -107,7 +105,7 @@ const CanvasImage: React.FC<CanvasImageProps> = ({ shapeProps, isSelected: _isSe
     >
       <KonvaImage
         image={image}
-        {...cropProps}
+        {...(cropProps as any)}
         x={localX}
         y={localY}
         width={drawWidth}
@@ -222,7 +220,7 @@ export const InteractiveCanvas: React.FC = () => {
   // Dynamic Canvas dimensions to account for left sidebar and right panel (if open on desktop)
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth > 768 
-      ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260
+      ? window.innerWidth - (sidebarOpen ? 280 : 0)
       : window.innerWidth,
     height: window.innerHeight
   });
@@ -231,7 +229,7 @@ export const InteractiveCanvas: React.FC = () => {
     const handleResize = () => {
       setCanvasSize({
         width: window.innerWidth > 768 
-          ? window.innerWidth - (sidebarOpen ? 280 : 0) - 260
+          ? window.innerWidth - (sidebarOpen ? 280 : 0)
           : window.innerWidth,
         height: window.innerHeight
       });
@@ -639,7 +637,7 @@ export const InteractiveCanvas: React.FC = () => {
         </button>
         <button 
           className="hud-button" 
-          onClick={() => addPage(794, 1123)} 
+          onClick={() => addPage(794, 1044)} 
           title={t.addPage}
           style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
         >

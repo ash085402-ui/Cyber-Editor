@@ -3,13 +3,23 @@ import { InteractiveCanvas } from './components/InteractiveCanvas';
 import { RadialMenu } from './components/RadialMenu';
 import { ContextHUD } from './components/ContextHUD';
 import { Sidebar } from './components/Sidebar';
-import { RightPanel } from './components/RightPanel';
+// RightPanel removed per UI simplification request
 import { Toolbar } from './components/Toolbar';
 import './index.css';
 
 function App() {
   return (
     <React.Fragment>
+      <button
+        className="top-open-image-button"
+        onClick={() => {
+          const input = document.getElementById('open-image-input') as HTMLInputElement | null;
+          input?.click();
+        }}
+      >
+        Բացել նկարը
+      </button>
+
       {/* Sidebar Navigation & Tools on Left */}
       <Sidebar />
 
@@ -19,8 +29,7 @@ function App() {
       {/* Bottom Toolbar */}
       <Toolbar />
 
-      {/* Right Pages Panel */}
-      <RightPanel />
+      {/* RightPanel removed to simplify layout */}
 
       {/* Context HUD - Only visible when a shape is selected */}
       <ContextHUD />

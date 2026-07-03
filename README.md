@@ -30,3 +30,21 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Running locally (dev)
+
+To run the app locally with Vite dev server and open the editor from another device on the same network:
+
+```bash
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+If port `5173` is in use, Vite will automatically pick the next available port (for example `5174`). Open the app at:
+
+- http://127.0.0.1:5173/Cyber-Editor/ on this machine
+- http://<your-computer-ip>:5173/Cyber-Editor/ from another device on the same network
+
+> You may need to allow access through Windows Firewall if prompted.
+
+Place any images you want available to the gallery in the `public/` folder (for example `Nkar1.jpg`, `Nkar2.jpg`, `Nkar3.jpg`).
