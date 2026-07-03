@@ -151,8 +151,8 @@ export const getNewspaperShapes = (): Shape[] => {
       // place under the Vardanants square header
       x: 30,
       y: 786,
-      width: 120,
-      height: 260,
+      width: 150,
+      height: 300,
       fill: '',
       stroke: '',
       strokeWidth: 0,
@@ -189,8 +189,8 @@ export const getNewspaperShapes = (): Shape[] => {
       id: 'bg_header_vardanants',
       type: 'rect',
       x: 30,
-      y: 545,
-      width: 170,
+      y: 560,
+      width: 180,
       height: 30,
       fill: '#b0b0b0',
       stroke: '',
@@ -204,7 +204,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'bg_header_marmashen',
       type: 'rect',
-      x: 200,
+      x: 220,
       y: 560,
       width: 300,
       height: 30,
@@ -220,7 +220,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'bg_header_mher',
       type: 'rect',
-      x: 200,
+      x: 220,
       y: 785,
       width: 300,
       height: 30,
@@ -375,7 +375,7 @@ export const getNewspaperShapes = (): Shape[] => {
       id: 'text_header_vardanants',
       type: 'text',
       x: 30,
-      y: 567,
+      y: 560,
       width: 150,
       height: 25,
       fill: '#000000',
@@ -413,9 +413,9 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_header_marmashen',
       type: 'text',
-      x: 200, // Սա ճիշտ է՝ հավասարեցված է 270-ի վրա
+      x: 220, // Սա ճիշտ է՝ հավասարեցված է 270-ի վրա
       y: 560,
-      width: 160,
+      width: 280,
       height: 25,
       fill: '#000000',
       stroke: '',
@@ -432,10 +432,10 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_body_marmashen',
       type: 'text',
-      x: 200, // Հաստատված է 270
+      x: 220, // Հաստատված է 270
       y: 590,
-      width: 300,
-      height: 170,
+      width: 280,
+      height: 180,
       fill: '#000000',
       stroke: '',
       strokeWidth: 0,
@@ -451,7 +451,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_header_mher',
       type: 'text',
-      x: 200, // Հաստատված է 270
+      x: 220, // Հաստատված է 270
       y: 785,
       width: 300,
       height: 25,
@@ -470,10 +470,10 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_body_mher',
       type: 'text',
-      x: 200, // Հաստատված է 270
+      x: 220, // Հաստատված է 270
       y: 815,
       width: 300,
-      height: 210,
+      height: 180,
       fill: '#000000',
       stroke: '',
       strokeWidth: 0,
