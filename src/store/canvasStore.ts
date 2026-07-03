@@ -110,10 +110,10 @@ export const getNewspaperShapes = (): Shape[] => {
       opacity: 1,
       glowColor: '#00f2fe',
       glowBlur: 0,
-      cropX: 15,
-      cropY: 100,
-      cropWidth: 495,
-      cropHeight: 330
+      cropX: 20,
+      cropY: 120,
+      cropWidth: 491,
+      cropHeight: 350
     },
     {
       id: 'img_church',
@@ -150,10 +150,10 @@ export const getNewspaperShapes = (): Shape[] => {
       opacity: 1,
       glowColor: '#00f2fe',
       glowBlur: 0,
-      cropX: 15,
-      cropY: 820,
-      cropWidth: 210,
-      cropHeight: 140
+      cropX: 20,
+      cropY: 830,
+      cropWidth: 228,
+      cropHeight: 160,
     },
 
     // Background rectangles for the headers (gray boxes)
@@ -380,7 +380,7 @@ export const getNewspaperShapes = (): Shape[] => {
       x: 20,
       y: 595,
       width: 228,
-      height: 230,
+      height: 270,
       fill: '#000000',
       stroke: '',
       strokeWidth: 0,
@@ -418,7 +418,7 @@ export const getNewspaperShapes = (): Shape[] => {
       x: 283,
       y: 595,
       width: 228,
-      height: 160,
+      height: 270,
       fill: '#000000',
       stroke: '',
       strokeWidth: 0,
