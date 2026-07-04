@@ -261,7 +261,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_subtitle',
       type: 'text',
-      x: 20,
+      x: 160,
       y: 70,
       width: 491,
       height: 25,
@@ -271,7 +271,7 @@ export const getNewspaperShapes = (): Shape[] => {
       rotation: 0,
       opacity: 1,
       text: 'Կենդանի Հիշողությունը',
-      fontSize: 20,
+      fontSize: 22,
       fontFamily: 'Inter',
       glowColor: '',
       glowBlur: 0,
