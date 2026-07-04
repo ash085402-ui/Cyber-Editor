@@ -242,7 +242,7 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_title',
       type: 'text',
-      x: 20,
+      x: 120,
       y: 20,
       width: 491,
       height: 40,
@@ -281,7 +281,7 @@ export const getNewspaperShapes = (): Shape[] => {
       id: 'text_header_right',
       type: 'text',
       x: 546,
-      y: 10,
+      y: 25,
       width: 228,
       height: 60,
       fill: '#000000',
