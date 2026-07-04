@@ -348,7 +348,7 @@ export const getNewspaperShapes = (): Shape[] => {
       strokeWidth: 0,
       rotation: 0,
       opacity: 1,
-      text: 'ԲԱՐԻ ԳԱԼՈՒՍՏ ԳՅՈՒՄՐԻ՝ ԱՐՎԵՍՏԻ ԵՎ ՄՇԱԿՈՒՅԹԻ ՄԱՅՐԱՔԱՂԱՔ',
+      text: 'ԲԱՐԻ ԳԱԼՈՒՍՏ ԳՅՈՒՄՐԻ՝ \n ԱՐՎԵՍՏԻ ԵՎ ՄՇԱԿՈՒՅԹԻ ՄԱՅՐԱՔԱՂԱՔ',
       fontSize: 17,
       fontFamily: 'Inter',
       glowColor: '',
