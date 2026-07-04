@@ -152,7 +152,7 @@ export const getNewspaperShapes = (): Shape[] => {
       glowBlur: 0,
       cropX: 20,
       cropY: 830,
-      cropWidth: 180
+      cropWidth: 180,
       cropHeight: 160,
     },
 
@@ -339,8 +339,8 @@ export const getNewspaperShapes = (): Shape[] => {
     {
       id: 'text_welcome_title',
       type: 'text',
-      x: 50,
-      y: 490,
+      x: 100,
+      y: 450,
       width: 491,
       height: 50,
       fill: '#000000',
