@@ -119,8 +119,8 @@ export const getNewspaperShapes = (): Shape[] => {
       id: 'img_church',
       type: 'image',
       src: baseImg,
-      x: 546,
-      y: 560,
+      x: 490,
+      y: 500,
       width: 228,
       height: 140,
       fill: '',
@@ -132,8 +132,8 @@ export const getNewspaperShapes = (): Shape[] => {
       glowBlur: 0,
       cropX: 490,
       cropY: 500,
-      cropWidth: 210,
-      cropHeight: 130
+      cropWidth: 228,
+      cropHeight: 140,
     },
     {
       id: 'img_street',
