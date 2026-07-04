@@ -152,7 +152,7 @@ export const getNewspaperShapes = (): Shape[] => {
       glowBlur: 0,
       cropX: 20,
       cropY: 830,
-      cropWidth: 228,
+      cropWidth: 178,
       cropHeight: 160,
     },
 
